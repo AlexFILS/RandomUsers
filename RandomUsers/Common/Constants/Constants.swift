@@ -6,6 +6,17 @@
 //
 
 enum Constants {
+    // MARK: - Networking
+    
+    struct Networking {
+        static let baseURL = "https://randomuser.me/"
+        static let usersEndpoint = "api"
+        
+        private init() {}
+    }
+    
+    // MARK: - Errors
+    
     enum ErrorDescription: String {
         case defaultError = "Something went wrong."
     }
