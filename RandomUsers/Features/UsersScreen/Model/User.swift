@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct User: Decodable, Equatable, Identifiable {
+struct User: Decodable, Hashable, Identifiable {
     let gender: Gender
     let name: Name
     let location: Location

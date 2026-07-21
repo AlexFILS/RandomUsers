@@ -13,7 +13,7 @@ import Observation
 final class UsersViewModel: BaseViewModel {
     private(set) var users: [User]
     @ObservationIgnored private let service: ServiceProtocol
-
+    
     init(
         users: [User] = [],
         service: ServiceProtocol = NetworkingClient(baseURL: Constants.Networking.baseURL)

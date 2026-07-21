@@ -30,13 +30,7 @@ struct UserDetailsView: View {
     private var details: some View {
         ScrollView {
             VStack(spacing: 16) {
-                AsyncImage(url: URL(string: user.picture.large)) { image in
-                    image.resizable()
-                } placeholder: {
-                    Color.gray.opacity(0.2)
-                }
-                .frame(width: 120, height: 120)
-                .clipShape(Circle())
+                AsyncImageWrapper(url: user.picture.large, size: 120)
 
                 VStack(spacing: 8) {
                     infoRow(title: "Email", value: user.email)

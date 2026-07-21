@@ -9,11 +9,10 @@ import SwiftUI
 
 struct UsersCoordinatorStack: View {
     @State private var coordinator = Coordinator()
-    @State private var usersViewModel = UsersViewModel()
 
     var body: some View {
         NavigationStack(path: $coordinator.path) {
-            UsersView(viewModel: usersViewModel)
+            UsersView()
                 .navigationDestination(for: Route.self) { route in
                     destination(for: route)
                 }
@@ -24,10 +23,8 @@ struct UsersCoordinatorStack: View {
     @ViewBuilder
     private func destination(for route: Route) -> some View {
         switch route {
-        case .userDetails(let id):
-            if let user = usersViewModel.users.first(where: { $0.id == id }) {
-                UserDetailsView(user: user)
-            }
+        case .userDetails(let user):
+            UserDetailsView(user: user)
         }
     }
 }

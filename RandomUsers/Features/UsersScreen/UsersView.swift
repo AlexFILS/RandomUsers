@@ -9,7 +9,11 @@ import SwiftUI
 
 struct UsersView: View {
     @Environment(Coordinator.self) private var coordinator
-    let viewModel: UsersViewModel
+    @State private var viewModel: UsersViewModel
+
+    init(viewModel: UsersViewModel = UsersViewModel()) {
+        _viewModel = State(initialValue: viewModel)
+    }
 
     var body: some View {
         BaseContentView(
@@ -22,11 +26,11 @@ struct UsersView: View {
             await viewModel.fetchUsersIfNeeded()
         }
     }
-
+    
     private var usersList: some View {
         List(viewModel.users) { user in
             Button {
-                coordinator.push(.userDetails(id: user.id))
+                coordinator.push(.userDetails(user))
             } label: {
                 UserRow(user: user)
             }
@@ -38,17 +42,13 @@ struct UsersView: View {
 
 private struct UserRow: View {
     let user: User
-
+    
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImage(url: URL(string: user.picture.thumbnail)) { image in
-                image.resizable()
-            } placeholder: {
-                Color.gray.opacity(0.2)
-            }
-            .frame(width: 44, height: 44)
-            .clipShape(Circle())
-
+            AsyncImageWrapper(
+                url: user.picture.thumbnail,
+                size: 44
+            )
             VStack(alignment: .leading) {
                 Text("\(user.name.first) \(user.name.last)")
                     .font(.headline)
@@ -63,7 +63,9 @@ private struct UserRow: View {
 
 #Preview {
     NavigationStack {
-        UsersView(viewModel: UsersViewModel(service: UsersServiceStub()))
+        UsersView(
+            viewModel: UsersViewModel(service: UsersServiceStub())
+        )
     }
     .environment(Coordinator())
 }

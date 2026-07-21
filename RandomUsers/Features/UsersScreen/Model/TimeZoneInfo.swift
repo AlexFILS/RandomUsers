@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct TimeZoneInfo: Decodable, Equatable {
+struct TimeZoneInfo: Decodable, Hashable {
     let offset: String
     let description: String
 }

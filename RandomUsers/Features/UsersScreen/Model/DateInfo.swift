@@ -9,7 +9,7 @@ import Foundation
 
 /// Shared shape for `dob` and `registered`, both of which pair an ISO 8601
 /// timestamp with a precomputed age in years.
-struct DateInfo: Decodable, Equatable {
+struct DateInfo: Decodable, Hashable {
     let date: Date
     let age: Int
 

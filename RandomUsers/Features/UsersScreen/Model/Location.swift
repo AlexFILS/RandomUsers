@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Location: Decodable, Equatable {
+struct Location: Decodable, Hashable {
     let street: Street
     let city: String
     let state: String

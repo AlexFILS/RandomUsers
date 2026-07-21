@@ -9,7 +9,7 @@ import Foundation
 
 /// Some countries have no national identification scheme, in which case the
 /// API returns a `null` value alongside the identification's name.
-struct UserIdentification: Decodable, Equatable {
+struct UserIdentification: Decodable, Hashable {
     let name: String
     let value: String?
 }

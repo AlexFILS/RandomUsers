@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Login: Decodable, Equatable {
+struct Login: Decodable, Hashable {
     let uuid: String
     let username: String
     let password: String
