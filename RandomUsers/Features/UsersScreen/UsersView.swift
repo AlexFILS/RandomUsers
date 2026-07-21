@@ -9,6 +9,12 @@ import SwiftUI
 
 struct UsersView: View {
     var body: some View {
+        BaseContentView(title: "Users") {
+            usersList
+        }
+    }
+    
+    private var usersList: some View {
         VStack {
             Image(systemName: "globe")
                 .imageScale(.large)

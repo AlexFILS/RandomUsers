@@ -11,7 +11,9 @@ import SwiftUI
 struct RandomUsersApp: App {
     var body: some Scene {
         WindowGroup {
-            UsersView()
+            NavigationStack {
+                UsersView()
+            }
         }
     }
 }
