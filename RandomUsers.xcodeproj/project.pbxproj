@@ -7,8 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		8EA55C97300F85ED005BE742 /* Networking in Frameworks */ = {isa = PBXBuildFile; productRef = 8EA55C96300F85ED005BE742 /* Networking */; };
-		8EA55C9A300F85FC005BE742 /* UIComponents in Frameworks */ = {isa = PBXBuildFile; productRef = 8EA55C99300F85FC005BE742 /* UIComponents */; };
+		8EA55D41300FDEA1005BE742 /* Networking in Frameworks */ = {isa = PBXBuildFile; productRef = 8EA55D40300FDEA1005BE742 /* Networking */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,8 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8EA55C9A300F85FC005BE742 /* UIComponents in Frameworks */,
-				8EA55C97300F85ED005BE742 /* Networking in Frameworks */,
+				8EA55D41300FDEA1005BE742 /* Networking in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -119,8 +117,7 @@
 			);
 			name = RandomUsers;
 			packageProductDependencies = (
-				8EA55C96300F85ED005BE742 /* Networking */,
-				8EA55C99300F85FC005BE742 /* UIComponents */,
+				8EA55D40300FDEA1005BE742 /* Networking */,
 			);
 			productName = RandomUsers;
 			productReference = 8EA55C53300F8104005BE742 /* RandomUsers.app */;
@@ -205,8 +202,8 @@
 			mainGroup = 8EA55C4A300F8104005BE742;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				8EA55C95300F85ED005BE742 /* XCLocalSwiftPackageReference "Packages/Networking" */,
-				8EA55C98300F85FC005BE742 /* XCLocalSwiftPackageReference "Packages/UIComponents" */,
+				8EA55D3F300FDEA1005BE742 /* XCLocalSwiftPackageReference "Packages/Networking" */,
+				8EA55D42300FDEA7005BE742 /* XCLocalSwiftPackageReference "Packages/UIComponents" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8EA55C54300F8104005BE742 /* Products */;
@@ -630,24 +627,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		8EA55C95300F85ED005BE742 /* XCLocalSwiftPackageReference "Packages/Networking" */ = {
+		8EA55D3F300FDEA1005BE742 /* XCLocalSwiftPackageReference "Packages/Networking" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/Networking;
 		};
-		8EA55C98300F85FC005BE742 /* XCLocalSwiftPackageReference "Packages/UIComponents" */ = {
+		8EA55D42300FDEA7005BE742 /* XCLocalSwiftPackageReference "Packages/UIComponents" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/UIComponents;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		8EA55C96300F85ED005BE742 /* Networking */ = {
+		8EA55D40300FDEA1005BE742 /* Networking */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Networking;
-		};
-		8EA55C99300F85FC005BE742 /* UIComponents */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = UIComponents;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
