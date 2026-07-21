@@ -5,14 +5,21 @@
 //  Created by Alexandru Mihai on 21/07/2026.
 //
 
+import Networking
 import SwiftUI
 
 struct UsersView: View {
     @Environment(Coordinator.self) private var coordinator
     @State private var viewModel: UsersViewModel
 
-    init(viewModel: UsersViewModel = UsersViewModel()) {
-        _viewModel = State(initialValue: viewModel)
+    init(viewModel: UsersViewModel? = nil) {
+        _viewModel = State(
+            initialValue: viewModel ?? UsersViewModel(
+                service: NetworkingClient(
+                    baseURL: Constants.Networking.baseURL
+                )
+            )
+        )
     }
 
     var body: some View {
@@ -30,7 +37,11 @@ struct UsersView: View {
     private var usersList: some View {
         List(viewModel.users) { user in
             Button {
-                coordinator.push(.userDetails(user))
+                coordinator.push(
+                    .userDetails(
+                        user
+                    )
+                )
             } label: {
                 UserRow(user: user)
             }
@@ -64,7 +75,9 @@ private struct UserRow: View {
 #Preview {
     NavigationStack {
         UsersView(
-            viewModel: UsersViewModel(service: UsersServiceStub())
+            viewModel: UsersViewModel(
+                service: UsersServiceStub()
+            )
         )
     }
     .environment(Coordinator())

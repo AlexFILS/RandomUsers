@@ -7,8 +7,6 @@
 
 import Foundation
 
-/// Shared shape for `dob` and `registered`, both of which pair an ISO 8601
-/// timestamp with a precomputed age in years.
 struct DateInfo: Decodable, Hashable {
     let date: Date
     let age: Int
@@ -25,7 +23,7 @@ struct DateInfo: Decodable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let dateString = try container.decode(String.self, forKey: .date)
-        guard let date = Self.dateFormatter.date(from: dateString) else {
+        guard let date = try? Date(dateString, strategy: Self.dateFormatStyle) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .date,
                 in: container,
@@ -36,9 +34,5 @@ struct DateInfo: Decodable, Hashable {
         self.age = try container.decode(Int.self, forKey: .age)
     }
 
-    private static let dateFormatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter
-    }()
+    private static let dateFormatStyle = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 }

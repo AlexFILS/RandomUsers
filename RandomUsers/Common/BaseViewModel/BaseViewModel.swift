@@ -32,6 +32,9 @@ class BaseViewModel {
         do {
             try await operation()
         } catch {
+            if error is CancellationError {
+                print("BaseViewModel perform() cancelled.")
+            }
             if let describableError = error as? DescribableErrorProtocol {
                 self.error = describableError
             }
