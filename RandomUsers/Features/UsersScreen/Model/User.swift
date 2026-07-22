@@ -32,3 +32,6 @@ struct User: Decodable, Hashable, Identifiable {
         case nationality = "nat"
     }
 }
+
+extension User: SearchableModelProtocol {
+}

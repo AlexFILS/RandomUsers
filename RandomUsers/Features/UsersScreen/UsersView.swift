@@ -24,19 +24,35 @@ struct UsersView: View {
 
     var body: some View {
         BaseContentView(
-            title: "Users",
-            isLoading: viewModel.isLoading
+            title: viewModel.screenTitle,
+            isLoading: viewModel.isLoading,
+            onSearch: viewModel.startSearching
         ) {
-            usersList
+            VStack(spacing: 0) {
+                if viewModel.isSearchBarVisible {
+                    searchBar
+                }
+                usersList
+            }
         }
         .task {
             await viewModel.fetchUsersIfNeeded()
         }
     }
-    
+
+    private var searchBar: some View {
+        SearchBar(
+            text: $viewModel.searchText,
+            placeholder: "Search for user...",
+            onCancel: viewModel.cancelSearch
+        )
+        .padding(.horizontal, 8)
+    }
+
     private var usersList: some View {
-        List(viewModel.users) { user in
+        List(viewModel.displayedUsers) { user in
             Button {
+                viewModel.cancelSearchTask()
                 coordinator.push(
                     .userDetails(
                         user
@@ -51,26 +67,7 @@ struct UsersView: View {
     }
 }
 
-private struct UserRow: View {
-    let user: User
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            AsyncImageWrapper(
-                url: user.picture.thumbnail,
-                size: 44
-            )
-            VStack(alignment: .leading) {
-                Text("\(user.name.first) \(user.name.last)")
-                    .font(.headline)
-                    .foregroundStyle(Theme.labelColor)
-                Text(user.email)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-}
+
 
 #Preview {
     NavigationStack {
