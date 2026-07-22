@@ -41,11 +41,17 @@ struct UsersView: View {
     }
 
     private var searchBar: some View {
-        SearchBar(
-            text: $viewModel.searchText,
-            placeholder: "Search for user...",
-            onCancel: viewModel.cancelSearch
-        )
+        HStack(spacing: 8) {
+            SearchBar(
+                text: $viewModel.searchText,
+                placeholder: "Search for user..."
+            )
+            Button(action: viewModel.cancelSearch) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(Theme.labelColor)
+            }
+            .buttonStyle(.plain)
+        }
         .padding(.horizontal, 8)
     }
 

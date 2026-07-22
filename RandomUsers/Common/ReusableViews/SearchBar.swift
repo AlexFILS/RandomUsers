@@ -6,27 +6,31 @@
 //
 
 import SwiftUI
+import UIKit
 
+/// Small vridge between  UIKit and SwiftUI
+/// In UIKit's SearchBar we get some elements 'for free', like the 'x' button inside the search bar.
+///
+/// The native cancel button is disabled: iOS 26 renders it with an automatic Liquid Glass
+/// background that can't be overridden from here, so hiding the search bar is handled by a
+/// plain SwiftUI button in `UsersView` instead.
 struct SearchBar: UIViewRepresentable {
     @Binding private var text: String
     private let placeholder: String
-    private let onCancel: () -> Void
 
     init(
         text: Binding<String>,
-        placeholder: String,
-        onCancel: @escaping () -> Void
+        placeholder: String
     ) {
         _text = text
         self.placeholder = placeholder
-        self.onCancel = onCancel
     }
 
     func makeUIView(context: Context) -> UISearchBar {
         let searchBar = UISearchBar()
         searchBar.delegate = context.coordinator
         searchBar.placeholder = placeholder
-        searchBar.showsCancelButton = true
+        searchBar.showsCancelButton = false
         searchBar.searchBarStyle = .minimal
         searchBar.autocapitalizationType = .none
         searchBar.autocorrectionType = .no
@@ -45,26 +49,19 @@ struct SearchBar: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, onCancel: onCancel)
+        Coordinator(text: $text)
     }
 
     final class Coordinator: NSObject, UISearchBarDelegate {
         private let text: Binding<String>
-        private let onCancel: () -> Void
         var hasBecomeFirstResponder = false
 
-        init(text: Binding<String>, onCancel: @escaping () -> Void) {
+        init(text: Binding<String>) {
             self.text = text
-            self.onCancel = onCancel
         }
 
         func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
             text.wrappedValue = searchText
-        }
-
-        func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
-            searchBar.resignFirstResponder()
-            onCancel()
         }
 
         func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {

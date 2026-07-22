@@ -55,6 +55,7 @@ struct BaseContentView<Content: View>: View {
                                 .foregroundStyle(Theme.labelColor)
                         }
                     }
+                    .sharedBackgroundVisibility(.hidden)
                 }
             }
             .toolbarBackground(backgroundColor, for: .navigationBar)
