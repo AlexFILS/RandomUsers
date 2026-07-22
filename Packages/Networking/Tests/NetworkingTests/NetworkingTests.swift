@@ -61,14 +61,26 @@ struct NetworkingClientTests {
         MockURLProtocol.requestHandler = { _ in
             throw URLError(.notConnectedToInternet)
         }
-        
+
         let client = makeClient()
-        
+
         do {
             let _: TestUser = try await client.request(Endpoint(path: "users"))
             Issue.record("Expected NetworkError.requestFailed")
         } catch NetworkError.requestFailed(let urlError) {
             #expect(urlError.code == .notConnectedToInternet)
+        }
+    }
+
+    @Test func throwsCancellationErrorWhenUnderlyingTaskIsCancelled() async throws {
+        MockURLProtocol.requestHandler = { _ in
+            throw URLError(.cancelled)
+        }
+
+        let client = makeClient()
+
+        await #expect(throws: CancellationError.self) {
+            let _: TestUser = try await client.request(Endpoint(path: "users"))
         }
     }
     

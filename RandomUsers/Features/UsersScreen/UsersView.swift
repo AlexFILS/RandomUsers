@@ -29,17 +29,26 @@ struct UsersView: View {
             isLoading: viewModel.isLoading,
             onSearch: viewModel.startSearching
         ) {
-            VStack {
-                if viewModel.isSearchBarVisible {
-                    searchBar
+            ZStack {
+                VStack {
+                    if viewModel.isSearchBarVisible {
+                        searchBar
+                    }
+                    if viewModel.hasNoSearchResults {
+                        noSearchResultsStatusView
+                    } else {
+                        usersList
+                    }
                 }
-                if viewModel.hasNoSearchResults {
-                    noSearchResultsStatusView
-                } else {
-                    usersList
+                .background(Theme.backgroundColorPrimary)
+                .blur(radius: viewModel.hasError ? 8 : 0)
+                .allowsHitTesting(!viewModel.hasError)
+
+                if viewModel.hasError {
+                    errorStatusView
                 }
             }
-            .background(Theme.backgroundColorPrimary)
+            .animation(.default, value: viewModel.hasError)
         }
         .task {
             await viewModel.fetchUsersIfNeeded()
@@ -71,6 +80,27 @@ struct UsersView: View {
             primaryButtonTitle: "OK",
             primaryAction: viewModel.clearSearchInput
         )
+    }
+
+    @ViewBuilder
+    private var errorStatusView: some View {
+        if viewModel.isInitialFetchFailure {
+            StatusView(
+                state: .error,
+                message: viewModel.errorDescription,
+                primaryButtonTitle: "Retry",
+                primaryAction: { Task { await viewModel.retry() } }
+            )
+        } else {
+            StatusView(
+                state: .error,
+                message: viewModel.errorDescription,
+                primaryButtonTitle: "OK",
+                secondaryButtonTitle: "Retry",
+                primaryAction: viewModel.clearErrors,
+                secondaryAction: { Task { await viewModel.retry() } }
+            )
+        }
     }
     
     private var usersList: some View {

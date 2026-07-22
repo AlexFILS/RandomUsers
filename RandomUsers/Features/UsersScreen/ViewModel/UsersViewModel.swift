@@ -12,18 +12,24 @@ import Observation
 @MainActor
 @Observable
 final class UsersViewModel {
-    let screenTitle = "Users"
+    private enum FailedFetch {
+        case initialUsers
+        case nextPage(index: Int)
+    }
+
     private(set) var users: [User]
     private(set) var isSearchBarVisible = false
     private(set) var searchResults: [User]?
     private(set) var isLoading = false
     private(set) var hasError = false
-    @ObservationIgnored private(set) var error: DescribableErrorProtocol?
 
+    @ObservationIgnored private(set) var error: DescribableErrorProtocol?
+    @ObservationIgnored let screenTitle = "Users"
     @ObservationIgnored private let service: ServiceProtocol
     @ObservationIgnored private let paginationConfiguration: UsersPaginationConfiguration
     @ObservationIgnored private let paginator: Paginator<UserPageFetcher>
     @ObservationIgnored private let searchController: SearchController<User>
+    @ObservationIgnored private var failedFetch: FailedFetch?
 
     var errorDescription: String {
         error?.description ?? Constants.ErrorDescription.defaultError.rawValue
@@ -39,6 +45,12 @@ final class UsersViewModel {
 
     var hasNoSearchResults: Bool {
         searchResults?.isEmpty ?? false
+    }
+
+    /// True when dismissing the error would reveal a blank screen instead of a user list.
+    var isInitialFetchFailure: Bool {
+        if case .initialUsers = failedFetch { return true }
+        return false
     }
 
     init(
@@ -63,6 +75,20 @@ final class UsersViewModel {
     func clearErrors() {
         hasError = false
         error = nil
+        failedFetch = nil
+    }
+
+    /// Re-runs whichever fetch last failed. No-ops if there's nothing to retry
+    /// (e.g. called after `clearErrors()`, or for a non-retryable error such as search).
+    func retry() async {
+        guard let failedFetch else { return }
+        clearErrors()
+        switch failedFetch {
+        case .initialUsers:
+            await fetchUsersIfNeeded()
+        case .nextPage(let index):
+            prefetchNextPageIfNeeded(at: index)
+        }
     }
 
     func fetchUsersIfNeeded() async {
@@ -75,19 +101,25 @@ final class UsersViewModel {
             )
             users = response.results
         } catch {
-            handle(error)
+            handle(error, retryingWith: .initialUsers)
         }
     }
 
     func prefetchNextPageIfNeeded(at index: Int) {
         guard searchResults == nil else { return }
-        paginator.prefetchNextPageIfNeeded(at: index, totalCount: users.count) { [weak self] result in
+        paginator.prefetchNextPageIfNeeded(
+            at: index,
+            totalCount: users.count
+        ) { [weak self] result in
             guard let self else { return }
             switch result {
             case .success(let newUsers):
                 users.append(contentsOf: newUsers)
             case .failure(let error):
-                handle(error)
+                handle(
+                    error,
+                    retryingWith: .nextPage(index: index)
+                )
             }
         }
     }
@@ -118,14 +150,15 @@ final class UsersViewModel {
         }
     }
 
-    /// Shared error-reporting policy for any async work run outside of `fetchUsersIfNeeded`
-    /// (e.g. the paginator's background fetch). Cancellation is a normal lifecycle event,
-    /// not a failure, so it's filtered out here rather than surfaced as `hasError`.
-    private func handle(_ error: Error) {
+    private func handle(
+        _ error: Error,
+        retryingWith retry: FailedFetch? = nil
+    ) {
         guard !(error is CancellationError) else { return }
         if let describableError = error as? DescribableErrorProtocol {
             self.error = describableError
         }
+        failedFetch = retry
         hasError = true
     }
 }
