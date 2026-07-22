@@ -44,6 +44,9 @@ struct UsersView: View {
         .task {
             await viewModel.fetchUsersIfNeeded()
         }
+        .task(id: viewModel.searchText) {
+            await viewModel.search()
+        }
     }
     
     private var searchBar: some View {
@@ -79,7 +82,6 @@ struct UsersView: View {
                 id: \.element.id
             ) { index, user in
                 Button {
-                    viewModel.cancelSearchTask()
                     coordinator.push(
                         .userDetails(
                             user
