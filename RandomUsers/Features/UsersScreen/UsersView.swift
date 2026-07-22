@@ -71,20 +71,43 @@ struct UsersView: View {
     }
     
     private var usersList: some View {
-        List(viewModel.displayedUsers) { user in
-            Button {
-                viewModel.cancelSearchTask()
-                coordinator.push(
-                    .userDetails(
-                        user
+        List {
+            ForEach(
+                Array(
+                    viewModel.displayedUsers.enumerated()
+                ),
+                id: \.element.id
+            ) { index, user in
+                Button {
+                    viewModel.cancelSearchTask()
+                    coordinator.push(
+                        .userDetails(
+                            user
+                        )
                     )
-                )
-            } label: {
-                UserRow(user: user)
+                } label: {
+                    UserRow(user: user)
+                }
+                .buttonStyle(.plain)
+                .onAppear {
+                    viewModel.prefetchNextPageIfNeeded(at: index)
+                }
             }
-            .buttonStyle(.plain)
+            if viewModel.isFetchingNextPage {
+                nextPageLoadingIndicator
+            }
         }
         .listStyle(.plain)
+    }
+
+    private var nextPageLoadingIndicator: some View {
+        HStack {
+            Spacer()
+            ProgressView()
+                .tint(Theme.accentColor)
+            Spacer()
+        }
+        .listRowSeparator(.hidden)
     }
 }
 

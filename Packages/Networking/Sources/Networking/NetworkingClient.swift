@@ -42,7 +42,11 @@ public final class NetworkingClient: Sendable {
         ) else {
             throw NetworkError.invalidURL
         }
-        
+
+        if !endpoint.queryItems.isEmpty {
+            components.queryItems = endpoint.queryItems
+        }
+
         guard let url = components.url else {
             throw NetworkError.invalidURL
         }

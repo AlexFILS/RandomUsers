@@ -158,6 +158,30 @@ struct NetworkingClientTests {
         }
     }
     
+    @Test func appendsQueryItemsToRequestURL() async throws {
+        let json = Data(#"{"id": 1, "name": "Ada"}"#.utf8)
+        nonisolated(unsafe) var capturedURL: URL?
+        MockURLProtocol.requestHandler = { [self] request in
+            capturedURL = request.url
+            return (httpResponse(for: request, statusCode: 200), json)
+        }
+
+        let client = makeClient()
+        let endpoint = Endpoint(
+            path: "users",
+            queryItems: [
+                URLQueryItem(name: "page", value: "1"),
+                URLQueryItem(name: "results", value: "20")
+            ]
+        )
+        let _: TestUser = try await client.request(endpoint)
+
+        let url = try #require(capturedURL)
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        #expect(components?.queryItems?.contains(URLQueryItem(name: "page", value: "1")) == true)
+        #expect(components?.queryItems?.contains(URLQueryItem(name: "results", value: "20")) == true)
+    }
+
     @Test func decodesArrayResponse() async throws {
         let json = Data(#"[{"id": 1, "name": "Ada"}, {"id": 2, "name": "Grace"}]"#.utf8)
         MockURLProtocol.requestHandler = { [self] request in
