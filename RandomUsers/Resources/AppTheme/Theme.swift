@@ -17,4 +17,9 @@ struct Theme {
     // MARK: - Text Colors
     
     static let labelColor = Color.black
+    static let labelSecondaryColor = Color.gray
+    
+    // MARK: - Background Colors
+    
+    static let backgroundColorPrimary = Color.white
 }

@@ -15,18 +15,28 @@ struct UserRow: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top) {
             AsyncImageWrapper(
                 url: user.picture.thumbnail,
                 size: 44
             )
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("\(user.name.first) \(user.name.last)")
-                    .font(.headline)
                     .foregroundStyle(Theme.labelColor)
                 Text(user.email)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.labelSecondaryColor)
+            }
+            Spacer()
+            VStack(alignment: .center, spacing: 6) {
+                Text(user.registered.date, format: .dateTime.hour().minute())
+                    .font(Font.system(size: 13))
+                    .foregroundStyle(Theme.labelSecondaryColor)
+                Image(systemName: "star")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 17, height: 17)
+                    .foregroundStyle(Theme.labelSecondaryColor)
             }
         }
     }

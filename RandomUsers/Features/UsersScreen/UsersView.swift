@@ -12,7 +12,7 @@ import UIComponents
 struct UsersView: View {
     @Environment(Coordinator.self) private var coordinator
     @State private var viewModel: UsersViewModel
-
+    
     init(viewModel: UsersViewModel? = nil) {
         _viewModel = State(
             initialValue: viewModel ?? UsersViewModel(
@@ -22,14 +22,14 @@ struct UsersView: View {
             )
         )
     }
-
+    
     var body: some View {
         BaseContentView(
             title: viewModel.screenTitle,
             isLoading: viewModel.isLoading,
             onSearch: viewModel.startSearching
         ) {
-            VStack(spacing: 0) {
+            VStack {
                 if viewModel.isSearchBarVisible {
                     searchBar
                 }
@@ -39,12 +39,13 @@ struct UsersView: View {
                     usersList
                 }
             }
+            .background(Theme.backgroundColorPrimary)
         }
         .task {
             await viewModel.fetchUsersIfNeeded()
         }
     }
-
+    
     private var searchBar: some View {
         HStack(spacing: 8) {
             SearchBar(
@@ -59,7 +60,7 @@ struct UsersView: View {
         }
         .padding(.horizontal, 8)
     }
-
+    
     private var noSearchResultsStatusView: some View {
         StatusView(
             state: .info,
@@ -68,7 +69,7 @@ struct UsersView: View {
             primaryAction: viewModel.clearSearchInput
         )
     }
-
+    
     private var usersList: some View {
         List(viewModel.displayedUsers) { user in
             Button {
