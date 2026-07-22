@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		8EA55D41300FDEA1005BE742 /* Networking in Frameworks */ = {isa = PBXBuildFile; productRef = 8EA55D40300FDEA1005BE742 /* Networking */; };
+		8EA55D44300FDEA8005BE742 /* UIComponents in Frameworks */ = {isa = PBXBuildFile; productRef = 8EA55D43300FDEA8005BE742 /* UIComponents */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8EA55D41300FDEA1005BE742 /* Networking in Frameworks */,
+				8EA55D44300FDEA8005BE742 /* UIComponents in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,6 +120,7 @@
 			name = RandomUsers;
 			packageProductDependencies = (
 				8EA55D40300FDEA1005BE742 /* Networking */,
+				8EA55D43300FDEA8005BE742 /* UIComponents */,
 			);
 			productName = RandomUsers;
 			productReference = 8EA55C53300F8104005BE742 /* RandomUsers.app */;
@@ -641,6 +644,10 @@
 		8EA55D40300FDEA1005BE742 /* Networking */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Networking;
+		};
+		8EA55D43300FDEA8005BE742 /* UIComponents */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = UIComponents;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

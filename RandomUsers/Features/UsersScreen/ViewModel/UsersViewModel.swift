@@ -24,6 +24,10 @@ final class UsersViewModel: BaseViewModel {
         searchResults ?? users
     }
 
+    var hasNoSearchResults: Bool {
+        searchResults?.isEmpty ?? false
+    }
+
     init(
         users: [User] = [],
         service: ServiceProtocol = NetworkingClient(baseURL: Constants.Networking.baseURL),
@@ -62,6 +66,10 @@ final class UsersViewModel: BaseViewModel {
 
     func cancelSearchTask() {
         searchTask?.cancel()
+    }
+
+    func clearSearchInput() {
+        searchText = ""
     }
 }
 

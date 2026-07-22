@@ -7,6 +7,7 @@
 
 import Networking
 import SwiftUI
+import UIComponents
 
 struct UsersView: View {
     @Environment(Coordinator.self) private var coordinator
@@ -32,7 +33,11 @@ struct UsersView: View {
                 if viewModel.isSearchBarVisible {
                     searchBar
                 }
-                usersList
+                if viewModel.hasNoSearchResults {
+                    noSearchResultsStatusView
+                } else {
+                    usersList
+                }
             }
         }
         .task {
@@ -53,6 +58,15 @@ struct UsersView: View {
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 8)
+    }
+
+    private var noSearchResultsStatusView: some View {
+        StatusView(
+            state: .info,
+            message: AppError.noMathcingUsers.description,
+            primaryButtonTitle: "OK",
+            primaryAction: viewModel.clearSearchInput
+        )
     }
 
     private var usersList: some View {
