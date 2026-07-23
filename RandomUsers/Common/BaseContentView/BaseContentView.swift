@@ -30,17 +30,19 @@ struct BaseContentView<Content: View>: View {
     
     var body: some View {
         content
-            .opacity(isLoading ? 0 : 1)
+            .blur(radius: isLoading ? 8 : 0)
+            .allowsHitTesting(!isLoading)
             .overlay {
                 if isLoading {
                     ProgressView {
-                        Text("Loading...") // TODO: Extract to localizable
+                        Text("Loading...")
                             .foregroundStyle(Theme.accentColor)
                     }
                     .progressViewStyle(.circular)
                     .tint(Theme.accentColor)
                 }
             }
+            .animation(.default, value: isLoading)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {

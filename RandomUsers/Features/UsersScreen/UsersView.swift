@@ -22,26 +22,23 @@ struct UsersView: View {
             isLoading: viewModel.isLoading,
             onSearch: viewModel.startSearching
         ) {
-            ZStack {
-                VStack {
-                    if viewModel.isSearchBarVisible {
-                        searchBar
-                    }
-                    if viewModel.hasNoSearchResults {
-                        noSearchResultsStatusView
-                    } else {
-                        usersList
-                    }
+            VStack {
+                if viewModel.isSearchBarVisible {
+                    searchBar
                 }
-                .background(Theme.backgroundColorPrimary)
-                .blur(radius: viewModel.hasError ? 8 : 0)
-                .allowsHitTesting(!viewModel.hasError)
-
-                if viewModel.hasError {
-                    errorStatusView
+                if viewModel.hasNoSearchResults {
+                    noSearchResultsStatusView
+                } else {
+                    usersList
                 }
             }
-            .animation(.default, value: viewModel.hasError)
+            .background(Theme.backgroundColorPrimary)
+            .blur(radius: viewModel.hasError ? 8 : 0)
+            .allowsHitTesting(!viewModel.hasError)
+            
+            if viewModel.hasError {
+                errorStatusView
+            }
         }
         .task {
             await viewModel.fetchUsersIfNeeded()
@@ -74,7 +71,7 @@ struct UsersView: View {
             primaryAction: viewModel.clearSearchInput
         )
     }
-
+    
     @ViewBuilder
     private var errorStatusView: some View {
         if viewModel.isInitialFetchFailure {
@@ -118,25 +115,10 @@ struct UsersView: View {
                     viewModel.prefetchNextPageIfNeeded(at: index)
                 }
             }
-            if viewModel.isFetchingNextPage {
-                nextPageLoadingIndicator
-            }
         }
         .listStyle(.plain)
     }
-
-    private var nextPageLoadingIndicator: some View {
-        HStack {
-            Spacer()
-            ProgressView()
-                .tint(Theme.accentColor)
-            Spacer()
-        }
-        .listRowSeparator(.hidden)
-    }
 }
-
-
 
 #Preview {
     NavigationStack {
