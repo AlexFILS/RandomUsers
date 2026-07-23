@@ -24,9 +24,7 @@ struct UsersResponseDecodingTests {
     }
     
     private static func date(_ iso8601: String) -> Date {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.date(from: iso8601)!
+        try! Date(iso8601, strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true))
     }
     
     private static let expectedResponse = UsersResponse(

@@ -16,52 +16,59 @@ final class UsersViewModel {
         case initialUsers
         case nextPage(index: Int)
     }
-
+    
     private(set) var users: [User]
     private(set) var isSearchBarVisible = false
     private(set) var searchResults: [User]?
     private(set) var isLoading = false
     private(set) var hasError = false
-
+    
     @ObservationIgnored private(set) var error: DescribableErrorProtocol?
     @ObservationIgnored let screenTitle = "Users"
     @ObservationIgnored private let service: ServiceProtocol
     @ObservationIgnored private let paginationConfiguration: UsersPaginationConfiguration
     @ObservationIgnored private let paginator: Paginator<UserPageFetcher>
     @ObservationIgnored private let searchController: SearchController<User>
+    @ObservationIgnored private let searchDebounceDuration: Duration
     @ObservationIgnored private var failedFetch: FailedFetch?
-
+    @ObservationIgnored private var retryTask: Task<Void, Never>?
+    
     var errorDescription: String {
         error?.description ?? Constants.ErrorDescription.defaultError.rawValue
     }
-
+    
     var isFetchingNextPage: Bool {
         paginator.isFetchingNextPage
     }
-
+    
     var displayedUsers: [User] {
         searchResults ?? users
     }
-
+    
     var hasNoSearchResults: Bool {
         searchResults?.isEmpty ?? false
     }
-
+    
     /// True when dismissing the error would reveal a blank screen instead of a user list.
     var isInitialFetchFailure: Bool {
         if case .initialUsers = failedFetch { return true }
         return false
     }
-
+    
+    /// Dependencies have no concrete-type defaults here on purpose - resolving the production
+    /// `NetworkingClient`/`UserSearchService` is a composition-root concern, not the initializer's.
+    /// See `UsersViewModel.production()` for the app's actual wiring.
     init(
         users: [User] = [],
-        service: ServiceProtocol = NetworkingClient(baseURL: Constants.Networking.baseURL),
-        searchService: SearchableCollectionProtocol = UserSearchService(),
-        paginationConfiguration: UsersPaginationConfiguration = .default
+        service: ServiceProtocol,
+        searchService: SearchableCollectionProtocol,
+        paginationConfiguration: UsersPaginationConfiguration = .default,
+        searchDebounceDuration: Duration = .seconds(1)
     ) {
         self.users = users
         self.service = service
         self.paginationConfiguration = paginationConfiguration
+        self.searchDebounceDuration = searchDebounceDuration
         self.paginator = Paginator(
             fetcher: UserPageFetcher(service: service, configuration: paginationConfiguration),
             maxPage: paginationConfiguration.maxPage,
@@ -69,17 +76,19 @@ final class UsersViewModel {
         )
         self.searchController = SearchController(searchService: searchService)
     }
-
+    
+    deinit {
+        retryTask?.cancel()
+    }
+    
     var searchText: String = ""
-
+    
     func clearErrors() {
         hasError = false
         error = nil
         failedFetch = nil
     }
-
-    /// Re-runs whichever fetch last failed. No-ops if there's nothing to retry
-    /// (e.g. called after `clearErrors()`, or for a non-retryable error such as search).
+    
     func retry() async {
         guard let failedFetch else { return }
         clearErrors()
@@ -90,7 +99,15 @@ final class UsersViewModel {
             prefetchNextPageIfNeeded(at: index)
         }
     }
-
+    
+    func retryTapped() {
+        retryTask?.cancel()
+        retryTask = Task { [weak self] in
+            await self?.retry()
+            self?.retryTask = nil
+        }
+    }
+    
     func fetchUsersIfNeeded() async {
         guard users.isEmpty, !isLoading else { return }
         isLoading = true
@@ -104,7 +121,7 @@ final class UsersViewModel {
             handle(error, retryingWith: .initialUsers)
         }
     }
-
+    
     func prefetchNextPageIfNeeded(at index: Int) {
         guard searchResults == nil else { return }
         paginator.prefetchNextPageIfNeeded(
@@ -123,20 +140,20 @@ final class UsersViewModel {
             }
         }
     }
-
+    
     func startSearching() {
         isSearchBarVisible = true
     }
-
+    
     func cancelSearch() {
         isSearchBarVisible = false
         searchText = ""
     }
-
+    
     func clearSearchInput() {
         searchText = ""
     }
-
+    
     func search() async {
         guard !searchText.isEmpty else {
             searchResults = nil
@@ -144,12 +161,13 @@ final class UsersViewModel {
         }
         paginator.cancelInFlightFetch()
         do {
+            try await Task.sleep(for: searchDebounceDuration)
             searchResults = try await searchController.search(query: searchText, in: users)
         } catch {
             handle(error)
         }
     }
-
+    
     private func handle(
         _ error: Error,
         retryingWith retry: FailedFetch? = nil
@@ -160,5 +178,14 @@ final class UsersViewModel {
         }
         failedFetch = retry
         hasError = true
+    }
+}
+
+extension UsersViewModel {
+    static func production() -> UsersViewModel {
+        UsersViewModel(
+            service: NetworkingClient(baseURL: Constants.Networking.baseURL),
+            searchService: UserSearchService()
+        )
     }
 }

@@ -5,7 +5,6 @@
 //  Created by Alexandru Mihai on 21/07/2026.
 //
 
-import Networking
 import SwiftUI
 import UIComponents
 
@@ -14,13 +13,7 @@ struct UsersView: View {
     @State private var viewModel: UsersViewModel
     
     init(viewModel: UsersViewModel? = nil) {
-        _viewModel = State(
-            initialValue: viewModel ?? UsersViewModel(
-                service: NetworkingClient(
-                    baseURL: Constants.Networking.baseURL
-                )
-            )
-        )
+        _viewModel = State(initialValue: viewModel ?? .production())
     }
     
     var body: some View {
@@ -89,7 +82,7 @@ struct UsersView: View {
                 state: .error,
                 message: viewModel.errorDescription,
                 primaryButtonTitle: "Retry",
-                primaryAction: { Task { await viewModel.retry() } }
+                primaryAction: viewModel.retryTapped
             )
         } else {
             StatusView(
@@ -98,7 +91,7 @@ struct UsersView: View {
                 primaryButtonTitle: "OK",
                 secondaryButtonTitle: "Retry",
                 primaryAction: viewModel.clearErrors,
-                secondaryAction: { Task { await viewModel.retry() } }
+                secondaryAction: viewModel.retryTapped
             )
         }
     }
@@ -149,7 +142,8 @@ struct UsersView: View {
     NavigationStack {
         UsersView(
             viewModel: UsersViewModel(
-                service: UsersServiceStub()
+                service: UsersServiceStub(),
+                searchService: UserSearchService()
             )
         )
     }

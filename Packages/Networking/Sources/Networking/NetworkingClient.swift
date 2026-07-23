@@ -65,8 +65,6 @@ public final class NetworkingClient: Sendable {
         do {
             (data, response) = try await session.data(for: request)
         } catch let error as URLError where error.code == .cancelled {
-            // Surface cancellation as `CancellationError` so it propagates uniformly
-            // through the async throw chain, instead of masquerading as a transport failure.
             throw CancellationError()
         } catch let error as URLError {
             throw NetworkError.requestFailed(error)
