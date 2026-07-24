@@ -8,6 +8,6 @@
 import Foundation
 
 struct UsersResponse: Decodable, Equatable {
-    let results: [User]
+    let results: [UserModel]
     let info: ResponseInfo
 }

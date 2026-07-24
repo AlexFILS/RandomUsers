@@ -9,7 +9,7 @@ struct UserPageFetcher: PagnationFetcherProtocol {
     let service: ServiceProtocol
     let configuration: UsersPaginationConfiguration
 
-    func fetchPage(_ page: Int) async throws -> [User] {
+    func fetchPage(_ page: Int) async throws -> [UserModel] {
         let response: UsersResponse = try await service.request(
             configuration.endpoint(forPage: page)
         )

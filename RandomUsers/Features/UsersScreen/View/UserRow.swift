@@ -8,9 +8,9 @@
 import SwiftUI
 
 struct UserRow: View {
-    let user: User
+    let user: UserModel
     
-    init(user: User) {
+    init(user: UserModel) {
         self.user = user
     }
     

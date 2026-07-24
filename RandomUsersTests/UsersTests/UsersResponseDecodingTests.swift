@@ -29,7 +29,7 @@ struct UsersResponseDecodingTests {
     
     private static let expectedResponse = UsersResponse(
         results: [
-            User(
+            UserModel(
                 gender: .female,
                 name: Name(title: "Miss", first: "Laura", last: "Woods"),
                 location: Location(
@@ -63,7 +63,7 @@ struct UsersResponseDecodingTests {
                 ),
                 nationality: "IE"
             ),
-            User(
+            UserModel(
                 gender: .male,
                 name: Name(title: "Mr", first: "Marten", last: "Faber"),
                 location: Location(
@@ -97,7 +97,7 @@ struct UsersResponseDecodingTests {
                 ),
                 nationality: "DE"
             ),
-            User(
+            UserModel(
                 gender: .female,
                 name: Name(title: "Miss", first: "Christy", last: "Diaz"),
                 location: Location(

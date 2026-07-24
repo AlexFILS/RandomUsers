@@ -47,8 +47,8 @@ struct UsersViewModelTests {
         }
     }
     
-    private static func makeUser(id: String) -> User {
-        User(
+    private static func makeUser(id: String) -> UserModel {
+        UserModel(
             gender: .female,
             name: Name(title: "Mx", first: "Test", last: "User"),
             location: Location(
@@ -73,7 +73,7 @@ struct UsersViewModelTests {
     }
     
     private static func makeViewModel(
-        users: [User] = [],
+        users: [UserModel] = [],
         service: StubService = StubService(),
         searchService: SearchableCollectionProtocol = ImmediateSearchService(),
         prefetchOffsetFromEnd: Int = 0,

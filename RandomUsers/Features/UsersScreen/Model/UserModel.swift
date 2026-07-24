@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct User: Decodable, Hashable, Identifiable {
+struct UserModel: Decodable, Hashable, Identifiable {
     let gender: Gender
     let name: Name
     let location: Location
@@ -33,5 +33,5 @@ struct User: Decodable, Hashable, Identifiable {
     }
 }
 
-extension User: SearchableModelProtocol {
+extension UserModel: SearchableModelProtocol {
 }

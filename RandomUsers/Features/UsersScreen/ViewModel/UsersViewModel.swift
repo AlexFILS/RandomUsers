@@ -17,9 +17,9 @@ final class UsersViewModel {
         case nextPage(index: Int)
     }
     
-    private(set) var users: [User]
+    private(set) var users: [UserModel]
     private(set) var isSearchBarVisible = false
-    private(set) var searchResults: [User]?
+    private(set) var searchResults: [UserModel]?
     private(set) var isLoading = false
     private(set) var hasError = false
     
@@ -28,7 +28,7 @@ final class UsersViewModel {
     @ObservationIgnored private let service: ServiceProtocol
     @ObservationIgnored private let paginationConfiguration: UsersPaginationConfiguration
     @ObservationIgnored private let paginator: Paginator<UserPageFetcher>
-    @ObservationIgnored private let searchController: SearchController<User>
+    @ObservationIgnored private let searchController: SearchController<UserModel>
     @ObservationIgnored private let searchDebounceDuration: Duration
     @ObservationIgnored private var failedFetch: FailedFetch?
     @ObservationIgnored private var retryTask: Task<Void, Never>?
@@ -41,7 +41,7 @@ final class UsersViewModel {
         paginator.isFetchingNextPage
     }
     
-    var displayedUsers: [User] {
+    var displayedUsers: [UserModel] {
         searchResults ?? users
     }
     
@@ -59,7 +59,7 @@ final class UsersViewModel {
     /// `NetworkingClient`/`UserSearchService` is a composition-root concern, not the initializer's.
     /// See `UsersViewModel.production()` for the app's actual wiring.
     init(
-        users: [User] = [],
+        users: [UserModel] = [],
         service: ServiceProtocol,
         searchService: SearchableCollectionProtocol,
         paginationConfiguration: UsersPaginationConfiguration = .default,

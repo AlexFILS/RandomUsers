@@ -6,5 +6,5 @@
 //
 
 enum Route: Hashable {
-    case userDetails(User)
+    case userDetails(UserModel)
 }

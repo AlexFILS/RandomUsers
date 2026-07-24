@@ -11,7 +11,10 @@ struct AsyncImageWrapper: View {
     private let url: String
     private let size: CGFloat
 
-    init(url: String, size: CGFloat) {
+    init(
+        url: String,
+        size: CGFloat
+    ) {
         self.url = url
         self.size = size
     }
