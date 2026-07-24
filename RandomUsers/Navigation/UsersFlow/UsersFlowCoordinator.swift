@@ -14,32 +14,30 @@ import SwiftUI
 final class UsersFlowCoordinator: Coordinator {
     var childCoordinators: [any Coordinator] = []
     var path = NavigationPath()
-
-    private let dependencies: AppDependencies
-
+    
+    @ObservationIgnored private let dependencies: AppDependencies
+    @ObservationIgnored private let usersViewModel: UsersViewModel
+    
     init(dependencies: AppDependencies) {
         self.dependencies = dependencies
-    }
-
-    func rootView() -> some View {
-        UsersView(
-            viewModel: makeUsersViewModel(),
-            coordinator: self
-        )
-    }
-
-    func destination(for route: UsersRoute) -> some View {
-        switch route {
-        case .userDetails(let user):
-            UserDetailsView(viewModel: UserDetailsViewModel(user: user), coordinator: self)
-        }
-    }
-
-    private func makeUsersViewModel() -> UsersViewModel {
-        UsersViewModel(
+        usersViewModel = UsersViewModel(
             service: dependencies.service,
             searchService: dependencies.searchService
         )
+    }
+    
+    func rootView() -> some View {
+        UsersView(
+            viewModel: usersViewModel,
+            coordinator: self
+        )
+    }
+    
+    func destination(for route: UsersRoute) -> some View {
+        switch route {
+        case .userDetails(let user):
+            UserDetailsView(user: user, coordinator: self)
+        }
     }
 }
 

@@ -20,9 +20,9 @@ struct UserModel: Decodable, Hashable, Identifiable {
     let identification: UserIdentification
     let picture: Picture
     let nationality: String
-
+    
     var id: String { login.uuid }
-
+    
     private enum CodingKeys: String, CodingKey {
         case gender, name, location, email, login
         case dateOfBirth = "dob"

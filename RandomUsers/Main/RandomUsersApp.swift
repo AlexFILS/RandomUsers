@@ -10,10 +10,11 @@ import SwiftUI
 @main
 struct RandomUsersApp: App {
     @State private var appCoordinator = AppCoordinator(dependencies: .production())
-
+    
     var body: some Scene {
         WindowGroup {
             UsersFlowStack(coordinator: appCoordinator.usersFlowCoordinator)
+                .preferredColorScheme(.light)
         }
     }
 }

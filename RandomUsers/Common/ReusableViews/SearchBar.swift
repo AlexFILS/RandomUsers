@@ -17,7 +17,7 @@ import UIKit
 struct SearchBar: UIViewRepresentable {
     @Binding private var text: String
     private let placeholder: String
-
+    
     init(
         text: Binding<String>,
         placeholder: String
@@ -25,7 +25,7 @@ struct SearchBar: UIViewRepresentable {
         _text = text
         self.placeholder = placeholder
     }
-
+    
     func makeUIView(context: Context) -> UISearchBar {
         let searchBar = UISearchBar()
         searchBar.delegate = context.coordinator
@@ -36,7 +36,7 @@ struct SearchBar: UIViewRepresentable {
         searchBar.autocorrectionType = .no
         return searchBar
     }
-
+    
     func updateUIView(_ uiView: UISearchBar, context: Context) {
         if uiView.text != text {
             uiView.text = text
@@ -47,23 +47,23 @@ struct SearchBar: UIViewRepresentable {
             uiView.becomeFirstResponder()
         }
     }
-
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text)
     }
-
+    
     final class Coordinator: NSObject, UISearchBarDelegate {
         private let text: Binding<String>
         var hasBecomeFirstResponder = false
-
+        
         init(text: Binding<String>) {
             self.text = text
         }
-
+        
         func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
             text.wrappedValue = searchText
         }
-
+        
         func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
             searchBar.resignFirstResponder()
         }

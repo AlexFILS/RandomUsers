@@ -15,6 +15,7 @@ public struct StatusView: View {
     private let foregroundColor: Color
     private let primaryAction: () -> Void
     private var secondaryAction: (() -> Void)?
+    @ScaledMetric(relativeTo: .largeTitle) private var iconSize: CGFloat = 60
 
     public init(
         state: StatusViewType,
@@ -36,12 +37,14 @@ public struct StatusView: View {
     public var body: some View {
         VStack(spacing: 20) {
             Image(systemName: state.icon)
-                .font(.system(size: 60))
+                .font(.system(size: iconSize))
                 .foregroundStyle(foregroundColor)
+                .accessibilityHidden(true)
             Text(state.title)
                 .font(.title)
                 .bold()
                 .foregroundStyle(foregroundColor)
+                .accessibilityAddTraits(.isHeader)
             Text(message)
                 .font(.body)
                 .foregroundStyle(foregroundColor)

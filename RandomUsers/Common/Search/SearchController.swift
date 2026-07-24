@@ -13,11 +13,11 @@
 @MainActor
 final class SearchController<Item: SearchableModelProtocol> {
     private let searchService: SearchableCollectionProtocol
-
+    
     init(searchService: SearchableCollectionProtocol) {
         self.searchService = searchService
     }
-
+    
     func search(query: String, in items: [Item]) async throws -> [Item] {
         try await searchService.search(query: query, in: items)
     }

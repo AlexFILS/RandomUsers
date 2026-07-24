@@ -5,6 +5,7 @@
 //  Created by Alexandru Mihai on 21/07/2026.
 //
 
+import Foundation
 import struct SwiftUI.Color
 
 public enum StatusViewType {
@@ -34,14 +35,16 @@ public enum StatusViewType {
         }
     }
     
+    /// Resolved against `.module`, so these titles come from the package's own String Catalog
+    /// rather than the host app's.
     var title: String {
         switch self {
         case .info:
-            return "Attention"
+            return String(localized: "Attention", bundle: .module)
         case .error:
-            return "Something went wrong"
+            return String(localized: "Something went wrong", bundle: .module)
         case .success:
-            return "Success"
+            return String(localized: "Success", bundle: .module)
         }
     }
 }

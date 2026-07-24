@@ -7,7 +7,8 @@
 
 import Networking
 
-protocol ServiceProtocol {
+protocol ServiceProtocol: Sendable {
+    @concurrent
     func request<Response: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> Response
 }
 

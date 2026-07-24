@@ -24,14 +24,6 @@
         "identifier" : "8EA55C5F300F8105005BE742",
         "name" : "RandomUsersTests"
       }
-    },
-    {
-      "parallelizable" : true,
-      "target" : {
-        "containerPath" : "container:RandomUsers.xcodeproj",
-        "identifier" : "8EA55C69300F8105005BE742",
-        "name" : "RandomUsersUITests"
-      }
     }
   ],
   "version" : 1

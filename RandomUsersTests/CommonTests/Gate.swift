@@ -11,14 +11,14 @@
 actor Gate {
     private var continuations: [CheckedContinuation<Void, Never>] = []
     private var arrivalWatchers: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
-
+    
     func wait() async {
         await withCheckedContinuation { continuation in
             continuations.append(continuation)
             notifyArrivalWatchers()
         }
     }
-
+    
     /// Suspends until at least `count` callers are parked in `wait()`. Use this to prove
     /// every task under test has actually reached the gate before calling `open()`,
     /// instead of guessing with a fixed number of yields.
@@ -28,7 +28,7 @@ actor Gate {
             arrivalWatchers.append((count, continuation))
         }
     }
-
+    
     func open() {
         let waiters = continuations
         continuations = []
@@ -36,7 +36,7 @@ actor Gate {
             continuation.resume()
         }
     }
-
+    
     private func notifyArrivalWatchers() {
         let readyCount = continuations.count
         arrivalWatchers.removeAll { watcher in

@@ -11,7 +11,7 @@ import Foundation
 
 @MainActor
 struct UserDetailsViewModelTests {
-
+    
     private static func makeUser(
         identificationValue: String? = "1101776T"
     ) -> UserModel {
@@ -38,61 +38,61 @@ struct UserDetailsViewModelTests {
             nationality: "US"
         )
     }
-
+    
     @Test
     func fullNameCombinesFirstAndLastName() {
         let viewModel = UserDetailsViewModel(user: Self.makeUser())
-
+        
         #expect(viewModel.fullName == "Jane Doe")
     }
-
+    
     @Test
     func usernameDisplayIsPrefixedWithAtSign() {
         let viewModel = UserDetailsViewModel(user: Self.makeUser())
-
+        
         #expect(viewModel.usernameDisplay == "@janedoe1")
     }
-
+    
     @Test
     func avatarUsesMediumPictureRatherThanThumbnailOrLarge() {
         let viewModel = UserDetailsViewModel(user: Self.makeUser())
-
+        
         #expect(viewModel.avatarURLString == "medium.jpg")
     }
-
+    
     @Test
     func sectionsGroupAllUserDetails() {
         let viewModel = UserDetailsViewModel(user: Self.makeUser())
-
+        
         #expect(viewModel.sections.map(\.title) == ["Personal", "Contact", "Address", "Account"])
     }
-
+    
     @Test
     func identificationRowUsesItsOwnNameAsTitle() {
         let viewModel = UserDetailsViewModel(user: Self.makeUser())
-
+        
         let personalSection = viewModel.sections.first { $0.title == "Personal" }
         let identificationRow = personalSection?.rows.first { $0.title == "PPS" }
-
+        
         #expect(identificationRow?.value == "1101776T")
     }
-
+    
     @Test
     func identificationRowFallsBackToNotAvailableWhenValueIsMissing() {
         let viewModel = UserDetailsViewModel(user: Self.makeUser(identificationValue: nil))
-
+        
         let personalSection = viewModel.sections.first { $0.title == "Personal" }
         let identificationRow = personalSection?.rows.first { $0.title == "PPS" }
-
+        
         #expect(identificationRow?.value == "Not available")
     }
-
+    
     @Test
     func addressSectionContainsFullLocationDetails() {
         let viewModel = UserDetailsViewModel(user: Self.makeUser())
-
+        
         let addressSection = viewModel.sections.first { $0.title == "Address" }
-
+        
         #expect(addressSection?.rows.first { $0.title == "Street" }?.value == "12 Main St")
         #expect(addressSection?.rows.first { $0.title == "City" }?.value == "Springfield")
         #expect(addressSection?.rows.first { $0.title == "Postcode" }?.value == "62704")

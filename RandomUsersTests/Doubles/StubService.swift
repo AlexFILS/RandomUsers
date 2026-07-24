@@ -8,7 +8,7 @@
 import Networking
 @testable import RandomUsers
 
-final class StubService: ServiceProtocol {
+final class StubService: ServiceProtocol, @unchecked Sendable {
     struct StubError: Error, Equatable {}
     
     var response = UsersResponse(results: [], info: ResponseInfo(seed: "seed", results: 0, page: 0, version: "1.4"))
@@ -16,6 +16,7 @@ final class StubService: ServiceProtocol {
     var gate: Gate?
     private(set) var requestCount = 0
     
+    @concurrent
     func request<Response: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> Response {
         requestCount += 1
         if let gate {

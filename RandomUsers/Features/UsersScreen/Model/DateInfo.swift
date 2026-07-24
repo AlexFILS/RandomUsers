@@ -10,16 +10,16 @@ import Foundation
 struct DateInfo: Decodable, Hashable {
     let date: Date
     let age: Int
-
+    
     private enum CodingKeys: String, CodingKey {
         case date, age
     }
-
+    
     init(date: Date, age: Int) {
         self.date = date
         self.age = age
     }
-
+    
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let dateString = try container.decode(String.self, forKey: .date)
@@ -33,6 +33,6 @@ struct DateInfo: Decodable, Hashable {
         self.date = date
         self.age = try container.decode(Int.self, forKey: .age)
     }
-
+    
     private static let dateFormatStyle = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 }

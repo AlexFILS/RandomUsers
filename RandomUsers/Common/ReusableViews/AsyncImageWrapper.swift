@@ -11,7 +11,7 @@ struct AsyncImageWrapper<FailureView: View>: View {
     private let url: String
     private let size: CGFloat
     private let failureView: FailureView
-
+    
     init(
         url: String,
         size: CGFloat,
@@ -21,7 +21,7 @@ struct AsyncImageWrapper<FailureView: View>: View {
         self.size = size
         self.failureView = failureView()
     }
-
+    
     var body: some View {
         AsyncImage(
             url: URL(string: url)

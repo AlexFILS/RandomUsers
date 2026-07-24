@@ -9,13 +9,14 @@ import SwiftUI
 
 struct DetailSectionView: View {
     let section: UserDetailsViewModel.DetailSection
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(section.title)
                 .font(.headline)
                 .foregroundStyle(Theme.labelColor)
-
+                .accessibilityAddTraits(.isHeader)
+            
             VStack(spacing: 8) {
                 ForEach(section.rows) { row in
                     DetailRowView(row: row)
@@ -25,6 +26,7 @@ struct DetailSectionView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     DetailSectionView(
         section: UserDetailsViewModel.DetailSection(
@@ -37,3 +39,4 @@ struct DetailSectionView: View {
     )
     .padding()
 }
+#endif

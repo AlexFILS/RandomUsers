@@ -15,11 +15,11 @@ struct Location: Decodable, Hashable {
     let postcode: String
     let coordinates: Coordinates
     let timezone: TimeZoneInfo
-
+    
     private enum CodingKeys: String, CodingKey {
         case street, city, state, country, postcode, coordinates, timezone
     }
-
+    
     init(
         street: Street,
         city: String,
@@ -37,7 +37,7 @@ struct Location: Decodable, Hashable {
         self.coordinates = coordinates
         self.timezone = timezone
     }
-
+    
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         street = try container.decode(Street.self, forKey: .street)
@@ -48,7 +48,7 @@ struct Location: Decodable, Hashable {
         timezone = try container.decode(TimeZoneInfo.self, forKey: .timezone)
         postcode = try Self.decodePostcode(from: container)
     }
-
+    
     // The API returns `postcode` as a number for some countries (e.g. Ireland)
     // and as a string for others (e.g. the UK), so both forms must be accepted.
     private static func decodePostcode(from container: KeyedDecodingContainer<CodingKeys>) throws -> String {

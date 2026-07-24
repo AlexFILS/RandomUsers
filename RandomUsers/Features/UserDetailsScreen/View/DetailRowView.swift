@@ -9,7 +9,7 @@ import SwiftUI
 
 struct DetailRowView: View {
     let row: UserDetailsViewModel.DetailRow
-
+    
     var body: some View {
         HStack {
             Text(row.title)
@@ -21,10 +21,14 @@ struct DetailRowView: View {
                 .foregroundStyle(Theme.labelColor)
                 .multilineTextAlignment(.trailing)
         }
+        // Read as "Email, jane.doe@example.com" rather than as two unrelated stops.
+        .accessibilityElement(children: .combine)
     }
 }
 
+#if DEBUG
 #Preview {
     DetailRowView(row: UserDetailsViewModel.DetailRow(title: "Email", value: "jane.doe@example.com"))
         .padding()
 }
+#endif

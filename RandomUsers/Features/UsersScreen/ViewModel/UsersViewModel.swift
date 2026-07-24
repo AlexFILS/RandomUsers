@@ -32,18 +32,26 @@ final class UsersViewModel {
     private(set) var searchResults: [UserModel]?
     private var state: ScreenState = .loaded
 
-    @ObservationIgnored let screenTitle = "Users"
+    @ObservationIgnored let screenTitle = String(localized: "Users")
     @ObservationIgnored private let paginationConfiguration: UsersPaginationConfiguration
     @ObservationIgnored private let fetcher: UserPageFetcher
     @ObservationIgnored private let paginator: Paginator<UserPageFetcher>
     @ObservationIgnored private let searchController: SearchController<UserModel>
     @ObservationIgnored private let searchDebounceDuration: Duration
     @ObservationIgnored private var retryTask: Task<Void, Never>?
-    @ObservationIgnored private var prefetchTask: Task<Void, Never>?
+    /// Readable so tests can await pagination kicked off by `clearErrors()`/`cancelSearch()`,
+    /// which return no task of their own.
+    @ObservationIgnored private(set) var prefetchTask: Task<Void, Never>?
+    /// Furthest row index the list has reported, used both to skip redundant prefetch checks
+    /// when scrolling back up and as the resume point after a fetch is interrupted - see
+    /// `resumePrefetchIfNeeded()`.
+    @ObservationIgnored private var furthestAppearedIndex = -1
 
+    /// Blocking, full-screen loading. Deliberately *excludes* `isFetchingNextPage`: loading a
+    /// further page must not blur out and disable the list the user is already reading.
     var isLoading: Bool {
         if case .loading = state { return true }
-        return isFetchingNextPage
+        return false
     }
 
     var hasError: Bool {
@@ -53,7 +61,7 @@ final class UsersViewModel {
 
     var errorDescription: String {
         guard case .failed(_, let message) = state else {
-            return Constants.ErrorDescription.defaultError.rawValue
+            return Constants.ErrorDescription.defaultError
         }
         return message
     }
@@ -104,8 +112,12 @@ final class UsersViewModel {
         prefetchTask?.cancel()
     }
     
+    /// Dismisses the error without retrying. Pagination is resumed explicitly: the row that
+    /// would normally re-trigger it has already appeared, so nothing else would ever ask
+    /// again and the list would be stuck at its current length.
     func clearErrors() {
         state = .loaded
+        resumePrefetchIfNeeded()
     }
 
     func retry() async {
@@ -113,12 +125,14 @@ final class UsersViewModel {
             let failedFetch,
             _
         ) = state, let failedFetch else { return }
-        clearErrors()
+        // Not `clearErrors()`: this path retries the failed fetch itself, so it must not also
+        // kick off a resume for the same page.
+        state = .loaded
         switch failedFetch {
         case .initialUsers:
             await fetchUsersIfNeeded()
         case .nextPage(let index):
-            await prefetchNextPageIfNeeded(at: index)?.value
+            await prefetchNextPageIfNeeded(at: index, force: true)?.value
         }
     }
 
@@ -143,8 +157,10 @@ final class UsersViewModel {
         }
     }
 
+    /// - Parameter force: bypasses the `furthestAppearedIndex` guard. Used by the resume paths,
+    ///   which need to re-ask for a row that has already appeared.
     @discardableResult
-    func prefetchNextPageIfNeeded(at index: Int) -> Task<Void, Never>? {
+    func prefetchNextPageIfNeeded(at index: Int, force: Bool = false) -> Task<Void, Never>? {
         // The eligibility checks run *inside* the `Task` rather than synchronously here,
         // so that a row's `onAppear` never touches `@Observable` state directly during
         // List's own scroll-driven layout pass - reading `isFetchingNextPage`/`searchResults`
@@ -153,6 +169,8 @@ final class UsersViewModel {
         // the top once scrolled back up).
         let task = Task { [weak self] in
             guard let self else { return }
+            guard force || index > furthestAppearedIndex else { return }
+            furthestAppearedIndex = max(furthestAppearedIndex, index)
             guard searchResults == nil, !isFetchingNextPage, paginator.hasMorePages else { return }
             do {
                 guard let newUsers = try await paginator.prefetchNextPageIfNeeded(
@@ -173,22 +191,34 @@ final class UsersViewModel {
         return task
     }
 
+    /// Re-asks for the page the furthest-seen row would have triggered.
+    ///
+    /// A prefetch can be abandoned without any row appearing again afterwards - the user was
+    /// already at the bottom of the list when a search cancelled the in-flight fetch, or when
+    /// the fetch failed and they dismissed the error. `onAppear` fires once per row, so
+    /// without this the list would silently stop paginating with no way to recover.
+    private func resumePrefetchIfNeeded() {
+        guard furthestAppearedIndex >= 0 else { return }
+        prefetchNextPageIfNeeded(at: furthestAppearedIndex, force: true)
+    }
+
     func startSearching() {
         isSearchBarVisible = true
     }
-    
+
     func cancelSearch() {
         isSearchBarVisible = false
         searchText = ""
+        clearSearchResults()
     }
-    
+
     func clearSearchInput() {
         searchText = ""
     }
-    
+
     func search() async {
         guard searchText.count >= Self.minimumSearchCharacterCount else {
-            searchResults = nil
+            clearSearchResults()
             return
         }
         paginator.cancelInFlightFetch()
@@ -199,18 +229,28 @@ final class UsersViewModel {
             handle(error)
         }
     }
-    
+
+    /// Leaving search restores the full list, so the pagination that `search()` cancelled has
+    /// to be picked back up. Guarded so that typing below the minimum query length doesn't
+    /// re-trigger a fetch on every keystroke.
+    private func clearSearchResults() {
+        guard searchResults != nil else { return }
+        searchResults = nil
+        resumePrefetchIfNeeded()
+    }
+
     private func handle(
         _ error: Error,
         retryingWith retry: FailedFetch? = nil
     ) {
         guard !(error is CancellationError) else { return }
         let message = (error as? DescribableErrorProtocol)?.description
-            ?? Constants.ErrorDescription.defaultError.rawValue
+            ?? Constants.ErrorDescription.defaultError
         state = .failed(retry, message: message)
     }
 }
 
+#if DEBUG
 extension UsersViewModel {
     static func develop() -> UsersViewModel {
         UsersViewModel(
@@ -226,3 +266,4 @@ extension UsersViewModel {
         )
     }
 }
+#endif

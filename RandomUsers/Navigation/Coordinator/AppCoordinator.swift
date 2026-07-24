@@ -15,9 +15,9 @@ import Observation
 @Observable
 final class AppCoordinator: Coordinator {
     var childCoordinators: [any Coordinator] = []
-
+    
     let usersFlowCoordinator: UsersFlowCoordinator
-
+    
     init(dependencies: AppDependencies) {
         usersFlowCoordinator = UsersFlowCoordinator(dependencies: dependencies)
         childCoordinators = [usersFlowCoordinator]

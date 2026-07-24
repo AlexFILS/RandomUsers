@@ -76,7 +76,7 @@ struct UsersViewModelTests {
         await viewModel.fetchUsersIfNeeded()
         
         #expect(viewModel.hasError)
-        #expect(viewModel.errorDescription == Constants.ErrorDescription.defaultError.rawValue)
+        #expect(viewModel.errorDescription == Constants.ErrorDescription.defaultError)
         #expect(viewModel.users.isEmpty)
     }
     
@@ -147,30 +147,30 @@ struct UsersViewModelTests {
         let service = StubService()
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
-
+        
         await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
-
+        
         #expect(viewModel.hasError)
         #expect(viewModel.users.count == 1)
     }
-
+    
     @Test
     func retryReRunsPrefetchNextPageIfNeededAndAppendsUsersOnSuccess() async {
         let service = StubService()
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
-
+        
         await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
         #expect(viewModel.hasError)
-
+        
         service.errorToThrow = nil
         service.response = UsersResponse(
             results: [Self.makeUser(id: "1")],
             info: ResponseInfo(seed: "seed", results: 1, page: 2, version: "1.4")
         )
-
+        
         await viewModel.retry()
-
+        
         #expect(!viewModel.hasError)
         #expect(viewModel.users.map(\.id) == ["0", "1"])
     }
@@ -184,13 +184,13 @@ struct UsersViewModelTests {
         
         let task = viewModel.prefetchNextPageIfNeeded(at: 0)
         await gate.waitForArrivals(count: 1)
-
+        
         viewModel.searchText = "test"
         await viewModel.search()
-
+        
         await gate.open()
         await task?.value
-
+        
         #expect(!viewModel.hasError)
         #expect(viewModel.users.count == 1)
     }
@@ -226,5 +226,95 @@ struct UsersViewModelTests {
         await searchTask.value
         
         #expect(viewModel.searchResults?.map(\.id) == ["1"])
+    }
+    
+    @Test
+    func searchBelowTheMinimumQueryLengthClearsResultsWithoutMatching() async {
+        let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")])
+        
+        viewModel.searchText = "abc"
+        await viewModel.search()
+        #expect(viewModel.searchResults != nil)
+        
+        viewModel.searchText = "ab"
+        await viewModel.search()
+        #expect(viewModel.searchResults == nil)
+    }
+    
+    // MARK: - loading state
+    
+    @Test
+    func fetchingTheNextPageIsNotReportedAsBlockingLoading() async {
+        let gate = Gate()
+        let service = StubService()
+        service.gate = gate
+        let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
+        
+        let task = viewModel.prefetchNextPageIfNeeded(at: 0)
+        await gate.waitForArrivals(count: 1)
+        
+        // `isLoading` drives a full-screen blur that disables the list, so paging must not
+        // set it - only `isFetchingNextPage`, which renders as a footer spinner.
+        #expect(viewModel.isFetchingNextPage)
+        #expect(!viewModel.isLoading)
+        
+        await gate.open()
+        await task?.value
+    }
+    
+    // MARK: - pagination resumes after an interrupted fetch
+    
+    @Test
+    func dismissingAPrefetchErrorResumesPagination() async {
+        let service = StubService()
+        service.errorToThrow = StubService.StubError()
+        let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
+        
+        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
+        #expect(viewModel.hasError)
+        
+        service.errorToThrow = nil
+        service.response = UsersResponse(
+            results: [Self.makeUser(id: "1")],
+            info: ResponseInfo(seed: "seed", results: 1, page: 2, version: "1.4")
+        )
+        
+        // "OK" rather than "Retry": row 0 has already appeared and will never appear again,
+        // so without an explicit resume the list would stay one page long forever.
+        viewModel.clearErrors()
+        await viewModel.prefetchTask?.value
+        
+        #expect(viewModel.users.map(\.id) == ["0", "1"])
+    }
+    
+    @Test
+    func leavingSearchResumesThePaginationItCancelled() async {
+        let gate = Gate()
+        let service = StubService()
+        service.gate = gate
+        let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
+        
+        let prefetch = viewModel.prefetchNextPageIfNeeded(at: 0)
+        await gate.waitForArrivals(count: 1)
+        
+        viewModel.searchText = "test"
+        await viewModel.search()
+        
+        await gate.open()
+        await prefetch?.value
+        // The page the search interrupted never landed.
+        #expect(viewModel.users.count == 1)
+        
+        service.gate = nil
+        service.response = UsersResponse(
+            results: [Self.makeUser(id: "1")],
+            info: ResponseInfo(seed: "seed", results: 1, page: 2, version: "1.4")
+        )
+        
+        viewModel.cancelSearch()
+        await viewModel.prefetchTask?.value
+        
+        #expect(viewModel.searchResults == nil)
+        #expect(viewModel.users.map(\.id) == ["0", "1"])
     }
 }

@@ -8,8 +8,10 @@
 import Foundation
 
 /// Pure matching logic only - no debounce/timing. Debounce is the caller's responsibility
-/// (see `UsersViewModel.search()`)
-final class UserSearchService: SearchableCollectionProtocol {
+/// (see `UsersViewModel.search()`). Stateless, so a value type: nothing here needs a
+/// reference identity, and it keeps the type trivially `Sendable`.
+struct UserSearchService: SearchableCollectionProtocol {
+    @concurrent
     func search<T>(query: String, in elements: [T]) async throws -> [T] where T : SearchableModelProtocol {
         let normalizedQuery = query
             .trimmingCharacters(in: .whitespacesAndNewlines)

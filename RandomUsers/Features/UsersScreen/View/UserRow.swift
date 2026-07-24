@@ -9,25 +9,30 @@ import SwiftUI
 
 struct UserRow: View {
     let user: UserModel
-    
+
+    /// Scales the avatar alongside the text so the row stays balanced at larger Dynamic Type
+    /// sizes instead of leaving a fixed-size thumbnail next to overflowing labels.
+    @ScaledMetric(relativeTo: .body) private var avatarSize: CGFloat = 44
+    @ScaledMetric(relativeTo: .caption) private var starSize: CGFloat = 17
+
     init(user: UserModel) {
         self.user = user
     }
-    
+
     var body: some View {
         HStack(alignment: .top) {
             AsyncImageWrapper(
                 url: user.picture.thumbnail,
-                size: 44
+                size: avatarSize
             ) {
                 Text(initials)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.callout.weight(.medium))
                     .foregroundStyle(Theme.labelColor)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Theme.primaryColor.opacity(0.3))
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text("\(user.name.first) \(user.name.last)")
+                Text(fullName)
                     .foregroundStyle(Theme.labelColor)
                     .lineLimit(1)
                 Text(user.email)
@@ -38,15 +43,24 @@ struct UserRow: View {
             Spacer()
             VStack(alignment: .center, spacing: 6) {
                 Text(user.registered.date, format: .dateTime.hour().minute())
-                    .font(Font.system(size: 13))
+                    .font(.footnote)
                     .foregroundStyle(Theme.labelSecondaryColor)
                 Image(systemName: "star")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 17, height: 17)
+                    .frame(width: starSize, height: starSize)
                     .foregroundStyle(Theme.labelSecondaryColor)
+                    .accessibilityHidden(true)
             }
         }
+        // One VoiceOver stop per user, rather than four unrelated fragments.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(fullName), \(user.email)")
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var fullName: String {
+        "\(user.name.first) \(user.name.last)"
     }
 
     private var initials: String {

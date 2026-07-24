@@ -23,7 +23,12 @@ public final class NetworkingClient: Sendable {
     }
     
     //MARK: - Request
-    
+
+    /// `@concurrent` so the request - and in particular the JSON decoding of its response -
+    /// runs on the concurrent pool rather than inheriting the caller's actor. Without it,
+    /// `NonisolatedNonsendingByDefault` would run this whole body on the calling
+    /// `@MainActor` view model and decode on the main thread.
+    @concurrent
     public func request<Response: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> Response {
         let urlRequest = try makeURLRequest(for: endpoint)
         let data = try await execute(urlRequest)

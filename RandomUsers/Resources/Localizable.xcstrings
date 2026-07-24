@@ -1,0 +1,119 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ (age %lld)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (age %2$lld)"
+          }
+        }
+      }
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "Account" : {
+
+    },
+    "Address" : {
+
+    },
+    "Back" : {
+
+    },
+    "Cancel search" : {
+
+    },
+    "Cell" : {
+
+    },
+    "City" : {
+
+    },
+    "Contact" : {
+
+    },
+    "Country" : {
+
+    },
+    "Date of Birth" : {
+
+    },
+    "Email" : {
+
+    },
+    "Gender" : {
+
+    },
+    "Loading more users" : {
+
+    },
+    "Loading..." : {
+
+    },
+    "Nationality" : {
+
+    },
+    "Not available" : {
+
+    },
+    "OK" : {
+
+    },
+    "Personal" : {
+
+    },
+    "Phone" : {
+
+    },
+    "Postcode" : {
+
+    },
+    "Profile photo of %@" : {
+
+    },
+    "Registered" : {
+
+    },
+    "Retry" : {
+
+    },
+    "Search" : {
+
+    },
+    "Search for user..." : {
+
+    },
+    "Something went wrong." : {
+
+    },
+    "State" : {
+
+    },
+    "Street" : {
+
+    },
+    "There are no users matching your search criteria." : {
+
+    },
+    "Timezone" : {
+
+    },
+    "Username" : {
+
+    },
+    "Users" : {
+
+    }
+  },
+  "version" : "1.0"
+}

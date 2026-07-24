@@ -22,11 +22,13 @@ extension AppDependencies {
             searchService: UserSearchService()
         )
     }
-
+    
+#if DEBUG
     static func develop() -> AppDependencies {
         AppDependencies(
             service: UsersServiceStub(),
             searchService: UserSearchService()
         )
     }
+#endif
 }

@@ -5,6 +5,8 @@
 //  Created by Alexandru Mihai on 21/07/2026.
 //
 
+import Foundation
+
 enum Constants {
     // MARK: - Networking
     
@@ -17,8 +19,13 @@ enum Constants {
     
     // MARK: - Errors
     
-    enum ErrorDescription: String {
-        case defaultError = "Something went wrong."
-        case noMatchingUsers = "There are no users matching your search criteria."
+    enum ErrorDescription {
+        static var defaultError: String {
+            String(localized: "Something went wrong.")
+        }
+        
+        static var noMatchingUsers: String {
+            String(localized: "There are no users matching your search criteria.")
+        }
     }
 }

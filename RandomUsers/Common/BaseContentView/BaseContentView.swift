@@ -14,7 +14,7 @@ struct BaseContentView<Content: View>: View {
     private let backgroundColor: Color
     private let onSearch: (() -> Void)?
     @ViewBuilder private let content: Content
-
+    
     init(
         title: String = "",
         isLoading: Bool = false,
@@ -43,6 +43,7 @@ struct BaseContentView<Content: View>: View {
                     }
                     .progressViewStyle(.circular)
                     .tint(Theme.accentColor)
+                    .accessibilityAddTraits(.updatesFrequently)
                 }
             }
             .animation(.default, value: isLoading)
@@ -52,6 +53,7 @@ struct BaseContentView<Content: View>: View {
                     Text(title)
                         .font(.headline)
                         .foregroundStyle(Theme.labelColor)
+                        .accessibilityAddTraits(.isHeader)
                 }
                 if let onSearch {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -60,6 +62,7 @@ struct BaseContentView<Content: View>: View {
                                 .foregroundStyle(Theme.labelColor)
                         }
                         .disabled(interactionsDisabled)
+                        .accessibilityLabel("Search")
                     }
                     .sharedBackgroundVisibility(.hidden)
                 }

@@ -8,7 +8,9 @@
 import Networking
 import Foundation
 
-final class UsersServiceStub: ServiceProtocol {
+#if DEBUG
+struct UsersServiceStub: ServiceProtocol {
+    @concurrent
     func request<Response>(
         _ endpoint: Networking.Endpoint = Endpoint(path: "")
     ) async throws -> Response where Response : Decodable, Response : Sendable {
@@ -19,3 +21,4 @@ final class UsersServiceStub: ServiceProtocol {
         return try JSONDecoder().decode(Response.self, from: data)
     }
 }
+#endif

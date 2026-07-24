@@ -5,6 +5,7 @@
 //  Created by Alexandru Mihai on 22/07/2026.
 //
 
-protocol SearchableCollectionProtocol {
+protocol SearchableCollectionProtocol: Sendable {
+    @concurrent
     func search<T: SearchableModelProtocol>(query: String, in elements: [T]) async throws -> [T]
 }

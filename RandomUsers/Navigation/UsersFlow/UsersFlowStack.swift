@@ -11,12 +11,11 @@ import SwiftUI
 /// place that talks to `NavigationStack`/`NavigationPath` directly - everything else drives
 /// navigation through `UsersFlowCoordinator`'s methods.
 struct UsersFlowStack: View {
-    @State private var coordinator: UsersFlowCoordinator
-
-    init(coordinator: UsersFlowCoordinator) {
-        _coordinator = State(initialValue: coordinator)
-    }
-
+    /// `@Bindable`, not `@State`: the coordinator is owned by `AppCoordinator`. This view only
+    /// needs a binding to its `path`, and copying it into `@State` would claim an ownership
+    /// this view doesn't have.
+    @Bindable var coordinator: UsersFlowCoordinator
+    
     var body: some View {
         NavigationStack(path: $coordinator.path) {
             coordinator.rootView()
@@ -27,6 +26,7 @@ struct UsersFlowStack: View {
     }
 }
 
+#if DEBUG
 #Preview {
     UsersFlowStack(
         coordinator: UsersFlowCoordinator(
@@ -34,3 +34,4 @@ struct UsersFlowStack: View {
         )
     )
 }
+#endif
