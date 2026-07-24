@@ -19,7 +19,13 @@ struct UserRow: View {
             AsyncImageWrapper(
                 url: user.picture.thumbnail,
                 size: 44
-            )
+            ) {
+                Text(initials)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Theme.labelColor)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Theme.primaryColor.opacity(0.3))
+            }
             VStack(alignment: .leading, spacing: 6) {
                 Text("\(user.name.first) \(user.name.last)")
                     .foregroundStyle(Theme.labelColor)
@@ -41,5 +47,9 @@ struct UserRow: View {
                     .foregroundStyle(Theme.labelSecondaryColor)
             }
         }
+    }
+
+    private var initials: String {
+        "\(user.name.first.prefix(1))\(user.name.last.prefix(1))".uppercased()
     }
 }
