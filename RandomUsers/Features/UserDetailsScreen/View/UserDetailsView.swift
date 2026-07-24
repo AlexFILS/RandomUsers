@@ -31,7 +31,6 @@ struct UserDetailsView: View {
                     Image(systemName: "chevron.backward")
                         .foregroundStyle(Theme.labelColor)
                 }
-                .accessibilityLabel("Back")
             }
         }
         .disablesSwipeBackGesture()
@@ -50,7 +49,6 @@ struct UserDetailsView: View {
     private var header: some View {
         VStack(spacing: 8) {
             AsyncImageWrapper(url: viewModel.avatarURLString, size: avatarSize)
-                .accessibilityLabel("Profile photo of \(viewModel.fullName)")
             Text(viewModel.usernameDisplay)
                 .font(.subheadline)
                 .foregroundStyle(Theme.labelSecondaryColor)

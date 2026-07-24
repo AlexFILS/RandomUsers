@@ -38,12 +38,11 @@ struct BaseContentView<Content: View>: View {
             .overlay {
                 if isLoading {
                     ProgressView {
-                        Text("Loading...")
+                        Text(.loading)
                             .foregroundStyle(Theme.accentColor)
                     }
                     .progressViewStyle(.circular)
                     .tint(Theme.accentColor)
-                    .accessibilityAddTraits(.updatesFrequently)
                 }
             }
             .animation(.default, value: isLoading)
@@ -53,7 +52,6 @@ struct BaseContentView<Content: View>: View {
                     Text(title)
                         .font(.headline)
                         .foregroundStyle(Theme.labelColor)
-                        .accessibilityAddTraits(.isHeader)
                 }
                 if let onSearch {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -62,7 +60,6 @@ struct BaseContentView<Content: View>: View {
                                 .foregroundStyle(Theme.labelColor)
                         }
                         .disabled(interactionsDisabled)
-                        .accessibilityLabel("Search")
                     }
                     .sharedBackgroundVisibility(.hidden)
                 }

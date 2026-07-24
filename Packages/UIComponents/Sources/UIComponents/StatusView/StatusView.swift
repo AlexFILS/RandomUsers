@@ -9,6 +9,7 @@ import SwiftUI
 
 public struct StatusView: View {
     private let state: StatusViewType
+    private let title: String
     private let message: String
     private let primaryButtonTitle: String
     private let secondaryButtonTitle: String?
@@ -17,8 +18,11 @@ public struct StatusView: View {
     private var secondaryAction: (() -> Void)?
     @ScaledMetric(relativeTo: .largeTitle) private var iconSize: CGFloat = 60
 
+    /// All copy is supplied by the caller - the package owns no strings of its own, so a host
+    /// app localizes every word of this view from its own String Catalog.
     public init(
         state: StatusViewType,
+        title: String,
         message: String,
         primaryButtonTitle: String,
         secondaryButtonTitle: String? = nil,
@@ -27,6 +31,7 @@ public struct StatusView: View {
         secondaryAction: (() -> Void)? = nil
     ) {
         self.state = state
+        self.title = title
         self.message = message
         self.primaryButtonTitle = primaryButtonTitle
         self.secondaryButtonTitle = secondaryButtonTitle
@@ -40,7 +45,7 @@ public struct StatusView: View {
                 .font(.system(size: iconSize))
                 .foregroundStyle(foregroundColor)
                 .accessibilityHidden(true)
-            Text(state.title)
+            Text(title)
                 .font(.title)
                 .bold()
                 .foregroundStyle(foregroundColor)

@@ -35,7 +35,7 @@ final class UsersViewModel {
     /// parked on it until they ask for it again - see `clearErrors()`.
     private var pendingPageRetryIndex: Int?
 
-    @ObservationIgnored let screenTitle = String(localized: "Users")
+    @ObservationIgnored let screenTitle = String(localized: .usersScreenTitle)
     @ObservationIgnored private let paginationConfiguration: UsersPaginationConfiguration
     @ObservationIgnored private let fetcher: UserPageFetcher
     @ObservationIgnored private let paginator: Paginator<UserPageFetcher>

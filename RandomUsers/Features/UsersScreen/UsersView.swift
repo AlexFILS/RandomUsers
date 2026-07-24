@@ -58,14 +58,13 @@ struct UsersView: View {
         HStack(spacing: 8) {
             SearchBar(
                 text: $viewModel.searchText,
-                placeholder: String(localized: "Search for user...")
+                placeholder: String(localized: .searchPlaceholder)
             )
             Button(action: viewModel.cancelSearch) {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundStyle(Theme.labelColor)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Cancel search")
         }
         .padding(.horizontal, 8)
     }
@@ -73,8 +72,9 @@ struct UsersView: View {
     private var noSearchResultsStatusView: some View {
         StatusView(
             state: .info,
+            title: String(localized: .statusInfoTitle),
             message: Constants.ErrorDescription.noMatchingUsers,
-            primaryButtonTitle: String(localized: "OK"),
+            primaryButtonTitle: String(localized: .ok),
             primaryAction: viewModel.clearSearchInput
         )
     }
@@ -85,16 +85,18 @@ struct UsersView: View {
             // Dismissing would reveal a blank screen, so retrying is the only way forward.
             StatusView(
                 state: .error,
+                title: String(localized: .statusErrorTitle),
                 message: viewModel.errorDescription,
-                primaryButtonTitle: String(localized: "Retry"),
+                primaryButtonTitle: String(localized: .retry),
                 primaryAction: viewModel.retryTapped
             )
         } else if viewModel.canRetry {
             StatusView(
                 state: .error,
+                title: String(localized: .statusErrorTitle),
                 message: viewModel.errorDescription,
-                primaryButtonTitle: String(localized: "OK"),
-                secondaryButtonTitle: String(localized: "Retry"),
+                primaryButtonTitle: String(localized: .ok),
+                secondaryButtonTitle: String(localized: .retry),
                 primaryAction: viewModel.clearErrors,
                 secondaryAction: viewModel.retryTapped
             )
@@ -102,8 +104,9 @@ struct UsersView: View {
             // A search failure has no fetch behind it; "Retry" here would do nothing at all.
             StatusView(
                 state: .error,
+                title: String(localized: .statusErrorTitle),
                 message: viewModel.errorDescription,
-                primaryButtonTitle: String(localized: "OK"),
+                primaryButtonTitle: String(localized: .ok),
                 primaryAction: viewModel.clearErrors
             )
         }
@@ -149,7 +152,7 @@ struct UsersView: View {
     private var nextPageRetryButton: some View {
         Button(action: viewModel.retryPendingPage) {
             Label(
-                String(localized: "Tap to load more"),
+                String(localized: .tapToLoadMore),
                 systemImage: "arrow.clockwise"
             )
             .font(.subheadline)
@@ -168,7 +171,6 @@ struct UsersView: View {
             .tint(Theme.accentColor)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .accessibilityLabel("Loading more users")
     }
 }
 

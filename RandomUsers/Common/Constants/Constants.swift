@@ -21,11 +21,11 @@ enum Constants {
     
     enum ErrorDescription {
         static var defaultError: String {
-            String(localized: "Something went wrong.")
+            String(localized: .defaultError)
         }
         
         static var noMatchingUsers: String {
-            String(localized: "There are no users matching your search criteria.")
+            String(localized: .noMatchingUsers)
         }
     }
 }

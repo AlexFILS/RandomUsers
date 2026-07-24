@@ -47,14 +47,14 @@ final class UserDetailsViewModel {
     
     private static func personalSection(for user: UserModel) -> DetailSection {
         DetailSection(
-            title: String(localized: "Personal"),
+            title: String(localized: .personalSectionTitle),
             rows: [
-                DetailRow(title: String(localized: "Gender"), value: user.gender.rawValue.capitalized),
-                DetailRow(title: String(localized: "Date of Birth"), value: dateOfBirthDisplay(for: user.dateOfBirth)),
-                DetailRow(title: String(localized: "Nationality"), value: user.nationality),
+                DetailRow(title: String(localized: .gender), value: user.gender.displayName),
+                DetailRow(title: String(localized: .dateOfBirth), value: dateOfBirthDisplay(for: user.dateOfBirth)),
+                DetailRow(title: String(localized: .nationality), value: user.nationality),
                 DetailRow(
                     title: user.identification.name,
-                    value: user.identification.value ?? String(localized: "Not available")
+                    value: user.identification.value ?? String(localized: .notAvailable)
                 )
             ]
         )
@@ -62,11 +62,11 @@ final class UserDetailsViewModel {
     
     private static func contactSection(for user: UserModel) -> DetailSection {
         DetailSection(
-            title: String(localized: "Contact"),
+            title: String(localized: .contactSectionTitle),
             rows: [
-                DetailRow(title: String(localized: "Email"), value: user.email),
-                DetailRow(title: String(localized: "Phone"), value: user.phone),
-                DetailRow(title: String(localized: "Cell"), value: user.cell)
+                DetailRow(title: String(localized: .email), value: user.email),
+                DetailRow(title: String(localized: .phone), value: user.phone),
+                DetailRow(title: String(localized: .cell), value: user.cell)
             ]
         )
     }
@@ -74,28 +74,28 @@ final class UserDetailsViewModel {
     private static func addressSection(for user: UserModel) -> DetailSection {
         let location = user.location
         return DetailSection(
-            title: String(localized: "Address"),
+            title: String(localized: .addressSectionTitle),
             rows: [
                 DetailRow(
-                    title: String(localized: "Street"),
+                    title: String(localized: .street),
                     value: "\(location.street.number) \(location.street.name)"
                 ),
-                DetailRow(title: String(localized: "City"), value: location.city),
-                DetailRow(title: String(localized: "State"), value: location.state),
-                DetailRow(title: String(localized: "Country"), value: location.country),
-                DetailRow(title: String(localized: "Postcode"), value: location.postcode),
-                DetailRow(title: String(localized: "Timezone"), value: timezoneDisplay(for: location.timezone))
+                DetailRow(title: String(localized: .city), value: location.city),
+                DetailRow(title: String(localized: .state), value: location.state),
+                DetailRow(title: String(localized: .country), value: location.country),
+                DetailRow(title: String(localized: .postcode), value: location.postcode),
+                DetailRow(title: String(localized: .timezone), value: timezoneDisplay(for: location.timezone))
             ]
         )
     }
     
     private static func accountSection(for user: UserModel) -> DetailSection {
         DetailSection(
-            title: String(localized: "Account"),
+            title: String(localized: .accountSectionTitle),
             rows: [
-                DetailRow(title: String(localized: "Username"), value: user.login.username),
+                DetailRow(title: String(localized: .username), value: user.login.username),
                 DetailRow(
-                    title: String(localized: "Registered"),
+                    title: String(localized: .registered),
                     value: user.registered.date.formatted(dateFormatStyle)
                 )
             ]
@@ -103,7 +103,7 @@ final class UserDetailsViewModel {
     }
     
     private static func dateOfBirthDisplay(for dateOfBirth: DateInfo) -> String {
-        String(localized: "\(dateOfBirth.date.formatted(dateFormatStyle)) (age \(dateOfBirth.age))")
+        String(localized: .dateOfBirthWithAge(dateOfBirth.date.formatted(dateFormatStyle), dateOfBirth.age))
     }
     
     private static func timezoneDisplay(for timezone: TimeZoneInfo) -> String {

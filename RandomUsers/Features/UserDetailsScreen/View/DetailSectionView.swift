@@ -15,7 +15,6 @@ struct DetailSectionView: View {
             Text(section.title)
                 .font(.headline)
                 .foregroundStyle(Theme.labelColor)
-                .accessibilityAddTraits(.isHeader)
             
             VStack(spacing: 8) {
                 ForEach(section.rows) { row in

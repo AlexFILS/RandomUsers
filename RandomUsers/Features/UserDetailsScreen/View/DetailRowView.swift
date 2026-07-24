@@ -21,8 +21,6 @@ struct DetailRowView: View {
                 .foregroundStyle(Theme.labelColor)
                 .multilineTextAlignment(.trailing)
         }
-        // Read as "Email, jane.doe@example.com" rather than as two unrelated stops.
-        .accessibilityElement(children: .combine)
     }
 }
 

@@ -53,10 +53,6 @@ struct UserRow: View {
                     .accessibilityHidden(true)
             }
         }
-        // One VoiceOver stop per user, rather than four unrelated fragments.
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(fullName), \(user.email)")
-        .accessibilityAddTraits(.isButton)
     }
 
     private var fullName: String {
