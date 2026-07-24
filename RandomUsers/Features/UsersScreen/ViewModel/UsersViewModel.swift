@@ -23,6 +23,8 @@ final class UsersViewModel {
         case failed(FailedFetch?, message: String)
     }
 
+    private static let minimumSearchCharacterCount = 3
+
     var searchText: String = ""
 
     private(set) var users: [UserModel]
@@ -185,7 +187,7 @@ final class UsersViewModel {
     }
     
     func search() async {
-        guard !searchText.isEmpty else {
+        guard searchText.count >= Self.minimumSearchCharacterCount else {
             searchResults = nil
             return
         }
