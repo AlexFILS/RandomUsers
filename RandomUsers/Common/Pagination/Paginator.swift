@@ -18,10 +18,13 @@ final class Paginator<Fetcher: PaginationFetcherProtocol> {
     @ObservationIgnored private var currentPage = 0
     @ObservationIgnored private var task: Task<[Fetcher.Item], Error>?
 
-    private var hasMorePages: Bool {
+    var hasMorePages: Bool {
         currentPage < maxPage
     }
 
+    /// - Parameter prefetchOffsetFromEnd: rank of the element (counting back from the last
+    ///   one) whose appearance should trigger the next fetch. `0` means "the last element",
+    ///   `2` means "the 3rd-last element", etc.
     init(
         fetcher: Fetcher,
         maxPage: Int,
@@ -40,24 +43,25 @@ final class Paginator<Fetcher: PaginationFetcherProtocol> {
         task?.cancel()
     }
 
-    /// Fetches the next page when `index` has reached the prefetch threshold. Returns `nil`
-    /// when no fetch was needed (already fetching, past `maxPage`, not at the threshold yet,
-    /// or the fetch was superseded by a `cancelInFlightFetch()` call) - callers should treat
-    /// `nil` the same as "nothing to append", not as a failure. Non-cancellation failures are
-    /// rethrown for the caller to handle.
+    /// Fetches the next page once `index` has reached (or passed) the prefetch threshold.
+    /// Returns `nil` when no fetch was needed (already fetching, past `maxPage`, not at the
+    /// threshold yet, or the fetch was superseded by a `cancelInFlightFetch()` call) - callers
+    /// should treat `nil` the same as "nothing to append", not as a failure. Non-cancellation
+    /// failures are rethrown for the caller to handle.
     func prefetchNextPageIfNeeded(at index: Int, totalCount: Int) async throws -> [Fetcher.Item]? {
         guard hasMorePages, task == nil else { return nil }
         let prefetchThreshold = totalCount - 1 - prefetchOffsetFromEnd
-        guard index == prefetchThreshold else { return nil }
+
+        guard index >= prefetchThreshold else { return nil }
 
         let pageToLoad = currentPage + 1
+        isFetchingNextPage = true
         let fetchTask = Task<[Fetcher.Item], Error> {
             let items = try await fetcher.fetchPage(pageToLoad)
             try Task.checkCancellation()
             return items
         }
         task = fetchTask
-        isFetchingNextPage = true
         defer {
             isFetchingNextPage = false
             task = nil

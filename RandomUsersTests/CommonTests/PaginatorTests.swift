@@ -57,6 +57,22 @@ struct PaginatorTests {
     }
 
     @Test
+    func fetchesWhenIndexOvershootsTheThreshold() async throws {
+        let paginator = Paginator(
+            fetcher: StubPageFetcher(pages: [1: ["b", "c"]]),
+            maxPage: 2,
+            prefetchOffsetFromEnd: 1
+        )
+
+        // totalCount 5, offset 1 -> threshold index is 3, but a fast scroll can skip
+        // straight past it (e.g. row 3's `onAppear` never fires) to row 4. The fetch
+        // must still fire rather than staying silent until the user scrolls back up.
+        let result = try await paginator.prefetchNextPageIfNeeded(at: 4, totalCount: 5)
+
+        #expect(result == ["b", "c"])
+    }
+
+    @Test
     func stopsFetchingOncePastMaxPage() async throws {
         let paginator = Paginator(
             fetcher: StubPageFetcher(pages: [1: ["b"]]),

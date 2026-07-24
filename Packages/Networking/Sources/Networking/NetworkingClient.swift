@@ -11,7 +11,7 @@ public final class NetworkingClient: Sendable {
     private let baseURL: String
     private let session: URLSession
     private let decoder: JSONDecoder
-    
+
     public init(
         baseURL: String,
         session: URLSession = .shared,

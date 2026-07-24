@@ -14,11 +14,13 @@ struct UsersPaginationConfiguration: Sendable {
     let seed: String
     let prefetchOffsetFromEnd: Int
 
+    // `prefetchOffsetFromEnd: 2` triggers the next fetch when the 3rd-last row appears
+    // (see `Paginator.init`'s doc comment for the rank convention).
     static let `default` = UsersPaginationConfiguration(
         resultsPerPage: 20,
         maxPage: 2,
         seed: "abc",
-        prefetchOffsetFromEnd: 3
+        prefetchOffsetFromEnd: 2
     )
 
     func endpoint(forPage page: Int) -> Endpoint {

@@ -23,9 +23,11 @@ struct UserRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("\(user.name.first) \(user.name.last)")
                     .foregroundStyle(Theme.labelColor)
+                    .lineLimit(1)
                 Text(user.email)
                     .font(.subheadline)
                     .foregroundStyle(Theme.labelSecondaryColor)
+                    .lineLimit(1)
             }
             Spacer()
             VStack(alignment: .center, spacing: 6) {

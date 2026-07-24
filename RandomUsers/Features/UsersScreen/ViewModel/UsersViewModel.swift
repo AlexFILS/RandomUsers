@@ -31,8 +31,8 @@ final class UsersViewModel {
     private var state: ScreenState = .loaded
 
     @ObservationIgnored let screenTitle = "Users"
-    @ObservationIgnored private let service: ServiceProtocol
     @ObservationIgnored private let paginationConfiguration: UsersPaginationConfiguration
+    @ObservationIgnored private let fetcher: UserPageFetcher
     @ObservationIgnored private let paginator: Paginator<UserPageFetcher>
     @ObservationIgnored private let searchController: SearchController<UserModel>
     @ObservationIgnored private let searchDebounceDuration: Duration
@@ -41,7 +41,7 @@ final class UsersViewModel {
 
     var isLoading: Bool {
         if case .loading = state { return true }
-        return false
+        return isFetchingNextPage
     }
 
     var hasError: Bool {
@@ -82,14 +82,15 @@ final class UsersViewModel {
         searchDebounceDuration: Duration = .seconds(1)
     ) {
         self.users = users
-        self.service = service
         self.paginationConfiguration = paginationConfiguration
         self.searchDebounceDuration = searchDebounceDuration
+        let fetcher = UserPageFetcher(
+            service: service,
+            configuration: paginationConfiguration
+        )
+        self.fetcher = fetcher
         self.paginator = Paginator(
-            fetcher: UserPageFetcher(
-                service: service,
-                configuration: paginationConfiguration
-            ),
+            fetcher: fetcher,
             maxPage: paginationConfiguration.maxPage,
             prefetchOffsetFromEnd: paginationConfiguration.prefetchOffsetFromEnd
         )
@@ -131,10 +132,7 @@ final class UsersViewModel {
         guard users.isEmpty, !isLoading else { return }
         state = .loading
         do {
-            let response: UsersResponse = try await service.request(
-                paginationConfiguration.endpoint(forPage: 0)
-            )
-            users = response.results
+            users = try await fetcher.fetchPage(0)
             state = .loaded
         } catch is CancellationError {
             state = .loaded
@@ -145,9 +143,15 @@ final class UsersViewModel {
 
     @discardableResult
     func prefetchNextPageIfNeeded(at index: Int) -> Task<Void, Never>? {
-        guard searchResults == nil else { return nil }
+        // The eligibility checks run *inside* the `Task` rather than synchronously here,
+        // so that a row's `onAppear` never touches `@Observable` state directly during
+        // List's own scroll-driven layout pass - reading `isFetchingNextPage`/`searchResults`
+        // synchronously from `onAppear` was corrupting the List's scroll offset after
+        // scrolling through many rows (visible as a blank gap with a stray separator at
+        // the top once scrolled back up).
         let task = Task { [weak self] in
             guard let self else { return }
+            guard searchResults == nil, !isFetchingNextPage, paginator.hasMorePages else { return }
             do {
                 guard let newUsers = try await paginator.prefetchNextPageIfNeeded(
                     at: index,
@@ -209,6 +213,13 @@ extension UsersViewModel {
     static func develop() -> UsersViewModel {
         UsersViewModel(
             service: UsersServiceStub(),
+            searchService: UserSearchService()
+        )
+    }
+
+    static func developWithError() -> UsersViewModel {
+        UsersViewModel(
+            service: UsersServiceErrorStub(),
             searchService: UserSearchService()
         )
     }

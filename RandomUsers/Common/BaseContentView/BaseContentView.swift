@@ -10,6 +10,7 @@ import SwiftUI
 struct BaseContentView<Content: View>: View {
     private let title: String
     private let isLoading: Bool
+    private let interactionsDisabled: Bool
     private let backgroundColor: Color
     private let onSearch: (() -> Void)?
     @ViewBuilder private let content: Content
@@ -17,11 +18,13 @@ struct BaseContentView<Content: View>: View {
     init(
         title: String = "",
         isLoading: Bool = false,
+        interactionsDisabled: Bool = false,
         backgroundColor: Color = Theme.primaryColor,
         onSearch: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.isLoading = isLoading
+        self.interactionsDisabled = interactionsDisabled
         self.title = title
         self.backgroundColor = backgroundColor
         self.onSearch = onSearch
@@ -56,6 +59,7 @@ struct BaseContentView<Content: View>: View {
                             Image(systemName: "magnifyingglass")
                                 .foregroundStyle(Theme.labelColor)
                         }
+                        .disabled(interactionsDisabled)
                     }
                     .sharedBackgroundVisibility(.hidden)
                 }

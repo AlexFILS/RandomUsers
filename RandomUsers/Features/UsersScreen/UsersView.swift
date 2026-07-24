@@ -10,8 +10,12 @@ import UIComponents
 
 struct UsersView: View {
     @State private var viewModel: UsersViewModel
+    // Tracks the furthest row index whose `onAppear` has already triggered a prefetch
+    // check, so scrolling back up over already-seen rows doesn't call into `viewModel`
+    // (and spawn a throwaway `Task`) again for rows that can no longer need it.
+    @State private var lastPrefetchCheckedIndex = -1
     private let coordinator: UsersFlowCoordinatorProtocol
-
+    
     init(
         viewModel: UsersViewModel,
         coordinator: UsersFlowCoordinatorProtocol
@@ -24,6 +28,7 @@ struct UsersView: View {
         BaseContentView(
             title: viewModel.screenTitle,
             isLoading: viewModel.isLoading,
+            interactionsDisabled: viewModel.hasError,
             onSearch: viewModel.startSearching
         ) {
             VStack {
@@ -36,10 +41,11 @@ struct UsersView: View {
                     usersList
                 }
             }
+            .allowsHitTesting(!viewModel.hasError)
             .background(Theme.backgroundColorPrimary)
             .blur(radius: viewModel.hasError ? 8 : 0)
-            .allowsHitTesting(!viewModel.hasError)
-            
+        }
+        .overlay {
             if viewModel.hasError {
                 errorStatusView
             }
@@ -98,25 +104,32 @@ struct UsersView: View {
     }
     
     private var usersList: some View {
-        List {
-            ForEach(
-                Array(
-                    viewModel.displayedUsers.enumerated()
-                ),
-                id: \.element.id
-            ) { index, user in
-                Button {
-                    coordinator.showUserDetails(for: user)
-                } label: {
-                    UserRow(user: user)
-                }
-                .buttonStyle(.plain)
-                .onAppear {
-                    viewModel.prefetchNextPageIfNeeded(at: index)
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(
+                    Array(
+                        viewModel.displayedUsers.enumerated()
+                    ),
+                    id: \.element.id
+                ) { index, user in
+                    Button {
+                        coordinator.showUserDetails(for: user)
+                    } label: {
+                        UserRow(user: user)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .onAppear {
+                        guard index > lastPrefetchCheckedIndex else { return }
+                        lastPrefetchCheckedIndex = index
+                        viewModel.prefetchNextPageIfNeeded(at: index)
+                    }
+                    Divider()
+                        .padding(.leading, 16)
                 }
             }
         }
-        .listStyle(.plain)
     }
 }
 
@@ -124,6 +137,15 @@ struct UsersView: View {
     NavigationStack {
         UsersView(
             viewModel: .develop(),
+            coordinator: PreviewUsersFlowCoordinator()
+        )
+    }
+}
+
+#Preview("Error") {
+    NavigationStack {
+        UsersView(
+            viewModel: .developWithError(),
             coordinator: PreviewUsersFlowCoordinator()
         )
     }

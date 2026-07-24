@@ -1,5 +1,5 @@
 //
-//  PagnationFetcherProtocol.swift
+//  PaginationFetcherProtocol.swift
 //  RandomUsers
 //
 //  Created by Alexandru Mihai on 22/07/2026.
