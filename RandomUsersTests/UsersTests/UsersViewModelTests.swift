@@ -265,28 +265,93 @@ struct UsersViewModelTests {
     // MARK: - pagination resumes after an interrupted fetch
     
     @Test
-    func dismissingAPrefetchErrorResumesPagination() async {
+    func dismissingAPrefetchErrorParksPaginationInsteadOfRefiringIt() async {
         let service = StubService()
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
-        
+
         await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
         #expect(viewModel.hasError)
-        
+
+        let requestCountAtFailure = service.requestCount
+        viewModel.clearErrors()
+        await viewModel.prefetchTask?.value
+
+        // "OK" used to re-fire the same fetch, which failed again and put the error straight
+        // back on screen - the user could never dismiss it while the failure persisted.
+        #expect(service.requestCount == requestCountAtFailure)
+        #expect(!viewModel.hasError)
+        #expect(viewModel.hasPendingPageRetry)
+    }
+
+    @Test
+    func aParkedPageIsNotPickedBackUpByARowAppearing() async {
+        let service = StubService()
+        service.errorToThrow = StubService.StubError()
+        let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
+
+        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
+        viewModel.clearErrors()
+        await viewModel.prefetchTask?.value
+
+        let requestCountAfterDismissal = service.requestCount
+        // Returning from another screen re-runs `onAppear` for the rows already on screen.
+        await viewModel.prefetchNextPageIfNeeded(at: 1)?.value
+
+        #expect(service.requestCount == requestCountAfterDismissal)
+        #expect(!viewModel.hasError)
+    }
+
+    @Test
+    func theFooterRetryResumesAParkedPage() async {
+        let service = StubService()
+        service.errorToThrow = StubService.StubError()
+        let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
+
+        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
+        viewModel.clearErrors()
+        await viewModel.prefetchTask?.value
+        #expect(viewModel.hasPendingPageRetry)
+
         service.errorToThrow = nil
         service.response = UsersResponse(
             results: [Self.makeUser(id: "1")],
             info: ResponseInfo(seed: "seed", results: 1, page: 2, version: "1.4")
         )
-        
-        // "OK" rather than "Retry": row 0 has already appeared and will never appear again,
-        // so without an explicit resume the list would stay one page long forever.
-        viewModel.clearErrors()
-        await viewModel.prefetchTask?.value
-        
+
+        // Row 0 has already appeared and will never appear again, so without this the list
+        // would stay one page long forever.
+        viewModel.retryPendingPage()
+        await viewModel.retryTask?.value
+
         #expect(viewModel.users.map(\.id) == ["0", "1"])
+        #expect(!viewModel.hasPendingPageRetry)
     }
-    
+
+    @Test
+    func aFailureLandingAfterDismissalDoesNotReviveTheError() async {
+        let gate = Gate()
+        let service = StubService()
+        service.gate = gate
+        service.errorToThrow = StubService.StubError()
+        let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
+
+        // The request is past the point of being cancellable: its real failure is already on
+        // its way back when the user dismisses.
+        service.ignoresCancellation = true
+
+        let prefetch = viewModel.prefetchNextPageIfNeeded(at: 0)
+        await gate.waitForArrivals(count: 1)
+
+        // Previously that failure re-raised the error the user had just dismissed - often
+        // while a pushed screen hid it, so it reappeared out of nowhere on the way back.
+        viewModel.clearErrors()
+        await gate.open()
+        await prefetch?.value
+
+        #expect(!viewModel.hasError)
+    }
+
     @Test
     func leavingSearchResumesThePaginationItCancelled() async {
         let gate = Gate()

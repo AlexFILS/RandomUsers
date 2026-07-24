@@ -14,14 +14,19 @@ final class StubService: ServiceProtocol, @unchecked Sendable {
     var response = UsersResponse(results: [], info: ResponseInfo(seed: "seed", results: 0, page: 0, version: "1.4"))
     var errorToThrow: Error?
     var gate: Gate?
+    /// Models a request that has already failed for real by the time cancellation arrives, so
+    /// `errorToThrow` escapes instead of being swallowed as a `CancellationError`.
+    var ignoresCancellation = false
     private(set) var requestCount = 0
-    
+
     @concurrent
     func request<Response: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> Response {
         requestCount += 1
         if let gate {
             await gate.wait()
-            try Task.checkCancellation()
+            if !ignoresCancellation {
+                try Task.checkCancellation()
+            }
         }
         if let errorToThrow {
             throw errorToThrow

@@ -82,13 +82,14 @@ struct UsersView: View {
     @ViewBuilder
     private var errorStatusView: some View {
         if viewModel.isInitialFetchFailure {
+            // Dismissing would reveal a blank screen, so retrying is the only way forward.
             StatusView(
                 state: .error,
                 message: viewModel.errorDescription,
                 primaryButtonTitle: String(localized: "Retry"),
                 primaryAction: viewModel.retryTapped
             )
-        } else {
+        } else if viewModel.canRetry {
             StatusView(
                 state: .error,
                 message: viewModel.errorDescription,
@@ -96,6 +97,14 @@ struct UsersView: View {
                 secondaryButtonTitle: String(localized: "Retry"),
                 primaryAction: viewModel.clearErrors,
                 secondaryAction: viewModel.retryTapped
+            )
+        } else {
+            // A search failure has no fetch behind it; "Retry" here would do nothing at all.
+            StatusView(
+                state: .error,
+                message: viewModel.errorDescription,
+                primaryButtonTitle: String(localized: "OK"),
+                primaryAction: viewModel.clearErrors
             )
         }
     }
@@ -127,9 +136,28 @@ struct UsersView: View {
                 }
                 if viewModel.isFetchingNextPage {
                     nextPageIndicator
+                } else if viewModel.hasPendingPageRetry {
+                    nextPageRetryButton
                 }
             }
         }
+    }
+    
+    /// Dismissing a paging error parks pagination rather than silently re-firing the fetch
+    /// (see `UsersViewModel.clearErrors()`). The row whose appearance would normally resume it
+    /// has already appeared and won't again, so this footer is the way back.
+    private var nextPageRetryButton: some View {
+        Button(action: viewModel.retryPendingPage) {
+            Label(
+                String(localized: "Tap to load more"),
+                systemImage: "arrow.clockwise"
+            )
+            .font(.subheadline)
+            .foregroundStyle(Theme.accentColor)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
     }
     
     /// Paging happens *below* the content the user is already reading - it must not blur or
