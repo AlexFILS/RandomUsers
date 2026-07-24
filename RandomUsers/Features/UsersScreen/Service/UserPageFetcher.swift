@@ -5,7 +5,7 @@
 //  Created by Alexandru Mihai on 22/07/2026.
 //
 
-struct UserPageFetcher: PagnationFetcherProtocol {
+struct UserPageFetcher: PaginationFetcherProtocol {
     let service: ServiceProtocol
     let configuration: UsersPaginationConfiguration
 

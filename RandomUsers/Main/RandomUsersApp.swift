@@ -9,9 +9,11 @@ import SwiftUI
 
 @main
 struct RandomUsersApp: App {
+    @State private var appCoordinator = AppCoordinator(dependencies: .production())
+
     var body: some Scene {
         WindowGroup {
-            UsersCoordinatorStack()
+            UsersFlowStack(coordinator: appCoordinator.usersFlowCoordinator)
         }
     }
 }

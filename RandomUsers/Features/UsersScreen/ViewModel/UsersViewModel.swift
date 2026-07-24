@@ -16,48 +16,66 @@ final class UsersViewModel {
         case initialUsers
         case nextPage(index: Int)
     }
-    
+
+    /// Collapses loading/error into one state instead of parallel `isLoading`/`hasError`/
+    /// `error` flags, so the description shown alongside an error can never go stale - each
+    /// transition into `.failed` carries its own message, computed fresh at the point of failure.
+    private enum ScreenState {
+        case loading
+        case loaded
+        case failed(FailedFetch?, message: String)
+    }
+
+    var searchText: String = ""
+
     private(set) var users: [UserModel]
     private(set) var isSearchBarVisible = false
     private(set) var searchResults: [UserModel]?
-    private(set) var isLoading = false
-    private(set) var hasError = false
-    
-    @ObservationIgnored private(set) var error: DescribableErrorProtocol?
+    private var state: ScreenState = .loaded
+
     @ObservationIgnored let screenTitle = "Users"
     @ObservationIgnored private let service: ServiceProtocol
     @ObservationIgnored private let paginationConfiguration: UsersPaginationConfiguration
     @ObservationIgnored private let paginator: Paginator<UserPageFetcher>
     @ObservationIgnored private let searchController: SearchController<UserModel>
     @ObservationIgnored private let searchDebounceDuration: Duration
-    @ObservationIgnored private var failedFetch: FailedFetch?
     @ObservationIgnored private var retryTask: Task<Void, Never>?
-    
-    var errorDescription: String {
-        error?.description ?? Constants.ErrorDescription.defaultError.rawValue
+
+    var isLoading: Bool {
+        if case .loading = state { return true }
+        return false
     }
-    
+
+    var hasError: Bool {
+        if case .failed = state { return true }
+        return false
+    }
+
+    var errorDescription: String {
+        guard case .failed(_, let message) = state else {
+            return Constants.ErrorDescription.defaultError.rawValue
+        }
+        return message
+    }
+
     var isFetchingNextPage: Bool {
         paginator.isFetchingNextPage
     }
-    
+
     var displayedUsers: [UserModel] {
         searchResults ?? users
     }
-    
+
     var hasNoSearchResults: Bool {
         searchResults?.isEmpty ?? false
     }
-    
+
     /// True when dismissing the error would reveal a blank screen instead of a user list.
     var isInitialFetchFailure: Bool {
-        if case .initialUsers = failedFetch { return true }
+        if case .failed(.initialUsers, _) = state { return true }
         return false
     }
-    
-    /// Dependencies have no concrete-type defaults here on purpose - resolving the production
-    /// `NetworkingClient`/`UserSearchService` is a composition-root concern, not the initializer's.
-    /// See `UsersViewModel.production()` for the app's actual wiring.
+
     init(
         users: [UserModel] = [],
         service: ServiceProtocol,
@@ -70,7 +88,10 @@ final class UsersViewModel {
         self.paginationConfiguration = paginationConfiguration
         self.searchDebounceDuration = searchDebounceDuration
         self.paginator = Paginator(
-            fetcher: UserPageFetcher(service: service, configuration: paginationConfiguration),
+            fetcher: UserPageFetcher(
+                service: service,
+                configuration: paginationConfiguration
+            ),
             maxPage: paginationConfiguration.maxPage,
             prefetchOffsetFromEnd: paginationConfiguration.prefetchOffsetFromEnd
         )
@@ -81,16 +102,12 @@ final class UsersViewModel {
         retryTask?.cancel()
     }
     
-    var searchText: String = ""
-    
     func clearErrors() {
-        hasError = false
-        error = nil
-        failedFetch = nil
+        state = .loaded
     }
-    
+
     func retry() async {
-        guard let failedFetch else { return }
+        guard case .failed(let failedFetch, _) = state, let failedFetch else { return }
         clearErrors()
         switch failedFetch {
         case .initialUsers:
@@ -99,7 +116,7 @@ final class UsersViewModel {
             prefetchNextPageIfNeeded(at: index)
         }
     }
-    
+
     func retryTapped() {
         retryTask?.cancel()
         retryTask = Task { [weak self] in
@@ -107,40 +124,39 @@ final class UsersViewModel {
             self?.retryTask = nil
         }
     }
-    
+
     func fetchUsersIfNeeded() async {
         guard users.isEmpty, !isLoading else { return }
-        isLoading = true
-        defer { isLoading = false }
+        state = .loading
         do {
             let response: UsersResponse = try await service.request(
                 paginationConfiguration.endpoint(forPage: 0)
             )
             users = response.results
+            state = .loaded
+        } catch is CancellationError {
+            state = .loaded
         } catch {
             handle(error, retryingWith: .initialUsers)
         }
     }
-    
+
     func prefetchNextPageIfNeeded(at index: Int) {
         guard searchResults == nil else { return }
-        paginator.prefetchNextPageIfNeeded(
-            at: index,
-            totalCount: users.count
-        ) { [weak self] result in
+        Task { [weak self] in
             guard let self else { return }
-            switch result {
-            case .success(let newUsers):
+            do {
+                guard let newUsers = try await paginator.prefetchNextPageIfNeeded(
+                    at: index,
+                    totalCount: users.count
+                ) else { return }
                 users.append(contentsOf: newUsers)
-            case .failure(let error):
-                handle(
-                    error,
-                    retryingWith: .nextPage(index: index)
-                )
+            } catch {
+                handle(error, retryingWith: .nextPage(index: index))
             }
         }
     }
-    
+
     func startSearching() {
         isSearchBarVisible = true
     }
@@ -173,18 +189,16 @@ final class UsersViewModel {
         retryingWith retry: FailedFetch? = nil
     ) {
         guard !(error is CancellationError) else { return }
-        if let describableError = error as? DescribableErrorProtocol {
-            self.error = describableError
-        }
-        failedFetch = retry
-        hasError = true
+        let message = (error as? DescribableErrorProtocol)?.description
+            ?? Constants.ErrorDescription.defaultError.rawValue
+        state = .failed(retry, message: message)
     }
 }
 
 extension UsersViewModel {
-    static func production() -> UsersViewModel {
+    static func develop() -> UsersViewModel {
         UsersViewModel(
-            service: NetworkingClient(baseURL: Constants.Networking.baseURL),
+            service: UsersServiceStub(),
             searchService: UserSearchService()
         )
     }

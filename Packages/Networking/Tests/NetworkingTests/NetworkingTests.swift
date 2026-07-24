@@ -1,5 +1,5 @@
 //
-//  MockURLProtocol.swift
+//  NetworkingTests.swift
 //  NetworkingTests
 //
 //  Created by Alexandru Mihai on 21/07/2026.

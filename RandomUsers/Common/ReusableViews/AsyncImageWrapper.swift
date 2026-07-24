@@ -1,5 +1,5 @@
 //
-//  AvatarImage.swift
+//  AsyncImageWrapper.swift
 //  RandomUsers
 //
 //  Created by Alexandru Mihai on 21/07/2026.

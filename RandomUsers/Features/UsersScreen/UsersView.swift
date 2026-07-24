@@ -9,11 +9,15 @@ import SwiftUI
 import UIComponents
 
 struct UsersView: View {
-    @Environment(Coordinator.self) private var coordinator
     @State private var viewModel: UsersViewModel
-    
-    init(viewModel: UsersViewModel? = nil) {
-        _viewModel = State(initialValue: viewModel ?? .production())
+    private let coordinator: UsersFlowCoordinatorProtocol
+
+    init(
+        viewModel: UsersViewModel,
+        coordinator: UsersFlowCoordinatorProtocol
+    ) {
+        _viewModel = State(initialValue: viewModel)
+        self.coordinator = coordinator
     }
     
     var body: some View {
@@ -102,11 +106,7 @@ struct UsersView: View {
                 id: \.element.id
             ) { index, user in
                 Button {
-                    coordinator.push(
-                        .userDetails(
-                            user
-                        )
-                    )
+                    coordinator.showUserDetails(for: user)
                 } label: {
                     UserRow(user: user)
                 }
@@ -123,11 +123,12 @@ struct UsersView: View {
 #Preview {
     NavigationStack {
         UsersView(
-            viewModel: UsersViewModel(
-                service: UsersServiceStub(),
-                searchService: UserSearchService()
-            )
+            viewModel: .develop(),
+            coordinator: PreviewUsersFlowCoordinator()
         )
     }
-    .environment(Coordinator())
+}
+
+private final class PreviewUsersFlowCoordinator: UsersFlowCoordinatorProtocol {
+    func showUserDetails(for user: UserModel) {}
 }

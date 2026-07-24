@@ -32,6 +32,7 @@
 		8EA55C53300F8104005BE742 /* RandomUsers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RandomUsers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8EA55C60300F8105005BE742 /* RandomUsersTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RandomUsersTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8EA55C6A300F8105005BE742 /* RandomUsersUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RandomUsersUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8EA5623C3013B112005BE742 /* RandomUsers.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = file; path = RandomUsers.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -82,6 +83,7 @@
 		8EA55C4A300F8104005BE742 = {
 			isa = PBXGroup;
 			children = (
+				8EA5623C3013B112005BE742 /* RandomUsers.xctestplan */,
 				8EA55C55300F8104005BE742 /* RandomUsers */,
 				8EA55C63300F8105005BE742 /* RandomUsersTests */,
 				8EA55C6D300F8105005BE742 /* RandomUsersUITests */,

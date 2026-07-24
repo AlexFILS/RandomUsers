@@ -5,19 +5,12 @@
 //  Created by Alexandru Mihai on 21/07/2026.
 //
 
-import SwiftUI
-
+/// A concrete coordinator additionally conforms to the screen-specific `*FlowCoordinatorProtocol`
+/// protocols declared by the features it drives (see `UsersFlowCoordinatorProtocol`,
+/// `UserDetailsFlowCoordinatorProtocol`) - this type only tracks parent/child ownership, so an
+/// `AppCoordinator` can hold and later replace whichever flows are active without knowing
+/// their concrete types.
 @MainActor
-@Observable
-final class Coordinator {
-    var path = NavigationPath()
-    
-    func push(_ route: Route) {
-        path.append(route)
-    }
-    
-    func pop() {
-        guard !path.isEmpty else { return }
-        path.removeLast()
-    }
+protocol Coordinator: AnyObject {
+    var childCoordinators: [any Coordinator] { get set }
 }

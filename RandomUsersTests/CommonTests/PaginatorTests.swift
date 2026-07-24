@@ -11,7 +11,7 @@ import Testing
 @MainActor
 struct PaginatorTests {
 
-    private struct StubPageFetcher: PagnationFetcherProtocol {
+    private struct StubPageFetcher: PaginationFetcherProtocol {
         struct StubError: Error {}
 
         var pages: [Int: [String]] = [:]
@@ -30,19 +30,17 @@ struct PaginatorTests {
     }
 
     @Test
-    func doesNothingBeforeThePrefetchThreshold() async {
+    func doesNothingBeforeThePrefetchThreshold() async throws {
         let paginator = Paginator(
             fetcher: StubPageFetcher(pages: [1: ["b"]]),
             maxPage: 2,
             prefetchOffsetFromEnd: 1
         )
 
-        var completionCalled = false
         // totalCount 5, offset 1 -> threshold index is 3; row 0 is nowhere near it.
-        paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 5) { _ in completionCalled = true }
+        let result = try await paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 5)
 
-        await Task.yield()
-        #expect(completionCalled == false)
+        #expect(result == nil)
     }
 
     @Test
@@ -53,38 +51,27 @@ struct PaginatorTests {
             prefetchOffsetFromEnd: 1
         )
 
-        let result = await withCheckedContinuation { continuation in
-            paginator.prefetchNextPageIfNeeded(at: 3, totalCount: 5) { result in
-                continuation.resume(returning: result)
-            }
-        }
+        let result = try await paginator.prefetchNextPageIfNeeded(at: 3, totalCount: 5)
 
-        try #expect(result.get() == ["b", "c"])
+        #expect(result == ["b", "c"])
     }
 
     @Test
-    func stopsFetchingOncePastMaxPage() async {
+    func stopsFetchingOncePastMaxPage() async throws {
         let paginator = Paginator(
             fetcher: StubPageFetcher(pages: [1: ["b"]]),
             maxPage: 1,
             prefetchOffsetFromEnd: 0
         )
 
-        _ = await withCheckedContinuation { continuation in
-            paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1) { result in
-                continuation.resume(returning: result)
-            }
-        }
+        _ = try await paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1)
+        let result = try await paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1)
 
-        var completionCalled = false
-        paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1) { _ in completionCalled = true }
-
-        await Task.yield()
-        #expect(completionCalled == false)
+        #expect(result == nil)
     }
 
     @Test
-    func ignoresOverlappingCallsWhileAFetchIsInFlight() async {
+    func ignoresOverlappingCallsWhileAFetchIsInFlight() async throws {
         let gate = Gate()
         let paginator = Paginator(
             fetcher: StubPageFetcher(pages: [1: ["b"]], gate: gate),
@@ -92,23 +79,20 @@ struct PaginatorTests {
             prefetchOffsetFromEnd: 0
         )
 
-        var firstCompletionCount = 0
-        paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1) { _ in firstCompletionCount += 1 }
+        let firstResultTask = Task { try await paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1) }
         await gate.waitForArrivals(count: 1)
 
-        var secondCompletionCalled = false
-        paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1) { _ in secondCompletionCalled = true }
+        let secondResult = try await paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1)
+        #expect(secondResult == nil)
 
         await gate.open()
-        await Task.yield()
-        await Task.yield()
+        let firstResult = try await firstResultTask.value
 
-        #expect(firstCompletionCount == 1)
-        #expect(secondCompletionCalled == false)
+        #expect(firstResult == ["b"])
     }
 
     @Test
-    func cancellingInFlightFetchSuppressesItsCompletion() async {
+    func cancellingInFlightFetchSuppressesItsCompletion() async throws {
         let gate = Gate()
         let paginator = Paginator(
             fetcher: StubPageFetcher(pages: [1: ["b"]], gate: gate),
@@ -116,16 +100,14 @@ struct PaginatorTests {
             prefetchOffsetFromEnd: 0
         )
 
-        var completionCalled = false
-        paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1) { _ in completionCalled = true }
+        let resultTask = Task { try await paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1) }
         await gate.waitForArrivals(count: 1)
 
         paginator.cancelInFlightFetch()
         await gate.open()
-        await Task.yield()
-        await Task.yield()
+        let result = try await resultTask.value
 
-        #expect(completionCalled == false)
+        #expect(result == nil)
     }
 
     @Test
@@ -136,12 +118,8 @@ struct PaginatorTests {
             prefetchOffsetFromEnd: 0
         )
 
-        let result = await withCheckedContinuation { continuation in
-            paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1) { result in
-                continuation.resume(returning: result)
-            }
+        await #expect(throws: StubPageFetcher.StubError.self) {
+            try await paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1)
         }
-
-        #expect(throws: StubPageFetcher.StubError.self) { try result.get() }
     }
 }

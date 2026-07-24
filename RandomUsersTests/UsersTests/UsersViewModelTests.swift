@@ -13,34 +13,6 @@ import Networking
 @MainActor
 struct UsersViewModelTests {
     
-    // MARK: - Test doubles
-    
-    /// Stands in for `NetworkingClient`. Only ever asked to decode `UsersResponse`,
-    /// mirroring the ViewModel's and `UserPageFetcher`'s actual usage.
-    private final class StubService: ServiceProtocol {
-        struct StubError: Error, Equatable {}
-        
-        var response = UsersResponse(results: [], info: ResponseInfo(seed: "seed", results: 0, page: 0, version: "1.4"))
-        var errorToThrow: Error?
-        var gate: Gate?
-        private(set) var requestCount = 0
-        
-        func request<Response: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> Response {
-            requestCount += 1
-            if let gate {
-                await gate.wait()
-                try Task.checkCancellation()
-            }
-            if let errorToThrow {
-                throw errorToThrow
-            }
-            guard let typedResponse = response as? Response else {
-                fatalError("StubService only supports decoding UsersResponse")
-            }
-            return typedResponse
-        }
-    }
-    
     private struct ImmediateSearchService: SearchableCollectionProtocol {
         func search<T: SearchableModelProtocol>(query: String, in elements: [T]) async throws -> [T] {
             elements
@@ -239,9 +211,9 @@ struct UsersViewModelTests {
         #expect(!viewModel.hasError)
         #expect(viewModel.users.count == 1)
     }
-
+    
     // MARK: - search: reads a fresh snapshot, not one taken before the debounce
-
+    
     @Test
     func searchReflectsUsersFetchedDuringTheDebounceWindow() async {
         let gate = Gate()
@@ -256,20 +228,20 @@ struct UsersViewModelTests {
             searchService: UserSearchService(),
             searchDebounceDuration: .milliseconds(200)
         )
-
+        
         let fetchTask = Task { await viewModel.fetchUsersIfNeeded() }
         await gate.waitForArrivals(count: 1)
-
+        
         viewModel.searchText = "1@example.com"
         let searchTask = Task { await viewModel.search() }
-
+        
         // The fetch resolves (and populates `users`) while `search()` is still asleep
         // for its debounce. If `search()` had snapshotted `users` before sleeping, the
         // result below would be empty instead of containing the newly fetched user.
         await gate.open()
         await fetchTask.value
         await searchTask.value
-
+        
         #expect(viewModel.searchResults?.map(\.id) == ["1"])
     }
 }

@@ -8,8 +8,7 @@
 import Foundation
 
 /// Pure matching logic only - no debounce/timing. Debounce is the caller's responsibility
-/// (see `UsersViewModel.search()`), since it needs to elapse before `elements` is read, not before
-/// this function is invoked.
+/// (see `UsersViewModel.search()`)
 final class UserSearchService: SearchableCollectionProtocol {
     func search<T>(query: String, in elements: [T]) async throws -> [T] where T : SearchableModelProtocol {
         let normalizedQuery = query

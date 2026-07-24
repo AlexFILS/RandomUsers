@@ -1,5 +1,5 @@
 //
-//  StatusViewActionButton.swift.swift
+//  StatusViewActionButton.swift
 //  UIComponents
 //
 //  Created by Alexandru Mihai on 21/07/2026.

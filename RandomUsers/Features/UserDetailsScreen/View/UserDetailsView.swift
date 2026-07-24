@@ -8,11 +8,12 @@
 import SwiftUI
 
 struct UserDetailsView: View {
-    @Environment(Coordinator.self) private var coordinator
     @State private var viewModel: UserDetailsViewModel
+    private let coordinator: UserDetailsFlowCoordinatorProtocol
 
-    init(user: UserModel) {
-        _viewModel = State(initialValue: UserDetailsViewModel(user: user))
+    init(viewModel: UserDetailsViewModel, coordinator: UserDetailsFlowCoordinatorProtocol) {
+        _viewModel = State(initialValue: viewModel)
+        self.coordinator = coordinator
     }
 
     var body: some View {
@@ -62,9 +63,15 @@ struct UserDetailsView: View {
 
 #Preview {
     NavigationStack {
-        UserDetailsView(user: .preview)
+        UserDetailsView(
+            viewModel: UserDetailsViewModel(user: .preview),
+            coordinator: PreviewUserDetailsFlowCoordinator()
+        )
     }
-    .environment(Coordinator())
+}
+
+private final class PreviewUserDetailsFlowCoordinator: UserDetailsFlowCoordinatorProtocol {
+    func pop() {}
 }
 
 private extension UserModel {
