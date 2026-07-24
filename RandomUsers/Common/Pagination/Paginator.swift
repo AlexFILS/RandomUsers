@@ -65,6 +65,7 @@ final class Paginator<Fetcher: PaginationFetcherProtocol> {
 
         do {
             let items = try await fetchTask.value
+            try Task.checkCancellation()
             currentPage = pageToLoad
             return items
         } catch is CancellationError {

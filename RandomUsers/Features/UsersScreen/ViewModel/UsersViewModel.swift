@@ -17,9 +17,6 @@ final class UsersViewModel {
         case nextPage(index: Int)
     }
 
-    /// Collapses loading/error into one state instead of parallel `isLoading`/`hasError`/
-    /// `error` flags, so the description shown alongside an error can never go stale - each
-    /// transition into `.failed` carries its own message, computed fresh at the point of failure.
     private enum ScreenState {
         case loading
         case loaded
@@ -40,6 +37,7 @@ final class UsersViewModel {
     @ObservationIgnored private let searchController: SearchController<UserModel>
     @ObservationIgnored private let searchDebounceDuration: Duration
     @ObservationIgnored private var retryTask: Task<Void, Never>?
+    @ObservationIgnored private var prefetchTask: Task<Void, Never>?
 
     var isLoading: Bool {
         if case .loading = state { return true }
@@ -100,6 +98,7 @@ final class UsersViewModel {
     
     deinit {
         retryTask?.cancel()
+        prefetchTask?.cancel()
     }
     
     func clearErrors() {
@@ -107,13 +106,16 @@ final class UsersViewModel {
     }
 
     func retry() async {
-        guard case .failed(let failedFetch, _) = state, let failedFetch else { return }
+        guard case .failed(
+            let failedFetch,
+            _
+        ) = state, let failedFetch else { return }
         clearErrors()
         switch failedFetch {
         case .initialUsers:
             await fetchUsersIfNeeded()
         case .nextPage(let index):
-            prefetchNextPageIfNeeded(at: index)
+            await prefetchNextPageIfNeeded(at: index)?.value
         }
     }
 
@@ -141,9 +143,10 @@ final class UsersViewModel {
         }
     }
 
-    func prefetchNextPageIfNeeded(at index: Int) {
-        guard searchResults == nil else { return }
-        Task { [weak self] in
+    @discardableResult
+    func prefetchNextPageIfNeeded(at index: Int) -> Task<Void, Never>? {
+        guard searchResults == nil else { return nil }
+        let task = Task { [weak self] in
             guard let self else { return }
             do {
                 guard let newUsers = try await paginator.prefetchNextPageIfNeeded(
@@ -152,9 +155,16 @@ final class UsersViewModel {
                 ) else { return }
                 users.append(contentsOf: newUsers)
             } catch {
-                handle(error, retryingWith: .nextPage(index: index))
+                handle(
+                    error,
+                    retryingWith: .nextPage(
+                        index: index
+                    )
+                )
             }
         }
+        prefetchTask = task
+        return task
     }
 
     func startSearching() {

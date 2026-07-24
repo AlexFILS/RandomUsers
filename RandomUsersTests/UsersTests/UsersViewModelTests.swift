@@ -144,49 +144,33 @@ struct UsersViewModelTests {
     
     @Test
     func prefetchNextPageIfNeededSurfacesErrorOnFailure() async {
-        let gate = Gate()
         let service = StubService()
-        service.gate = gate
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
-        
-        viewModel.prefetchNextPageIfNeeded(at: 0)
-        await gate.waitForArrivals(count: 1)
-        await gate.open()
-        await Task.yield()
-        await Task.yield()
-        
+
+        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
+
         #expect(viewModel.hasError)
         #expect(viewModel.users.count == 1)
     }
-    
+
     @Test
     func retryReRunsPrefetchNextPageIfNeededAndAppendsUsersOnSuccess() async {
-        let gate = Gate()
         let service = StubService()
-        service.gate = gate
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
-        
-        viewModel.prefetchNextPageIfNeeded(at: 0)
-        await gate.waitForArrivals(count: 1)
-        await gate.open()
-        await Task.yield()
-        await Task.yield()
+
+        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
         #expect(viewModel.hasError)
-        
+
         service.errorToThrow = nil
         service.response = UsersResponse(
             results: [Self.makeUser(id: "1")],
             info: ResponseInfo(seed: "seed", results: 1, page: 2, version: "1.4")
         )
-        
+
         await viewModel.retry()
-        await gate.waitForArrivals(count: 1)
-        await gate.open()
-        await Task.yield()
-        await Task.yield()
-        
+
         #expect(!viewModel.hasError)
         #expect(viewModel.users.map(\.id) == ["0", "1"])
     }
@@ -198,16 +182,15 @@ struct UsersViewModelTests {
         service.gate = gate
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
         
-        viewModel.prefetchNextPageIfNeeded(at: 0)
+        let task = viewModel.prefetchNextPageIfNeeded(at: 0)
         await gate.waitForArrivals(count: 1)
-        
+
         viewModel.searchText = "test"
         await viewModel.search()
-        
+
         await gate.open()
-        await Task.yield()
-        await Task.yield()
-        
+        await task?.value
+
         #expect(!viewModel.hasError)
         #expect(viewModel.users.count == 1)
     }
