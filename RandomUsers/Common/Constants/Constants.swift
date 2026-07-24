@@ -19,5 +19,6 @@ enum Constants {
     
     enum ErrorDescription: String {
         case defaultError = "Something went wrong."
+        case noMatchingUsers = "There are no users matching your search criteria."
     }
 }

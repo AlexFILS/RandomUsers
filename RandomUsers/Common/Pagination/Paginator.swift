@@ -18,7 +18,7 @@ final class Paginator<Fetcher: PagnationFetcherProtocol> {
     @ObservationIgnored private var currentPage = 0
     @ObservationIgnored private var task: Task<Void, Never>?
 
-    var hasMorePages: Bool {
+    private var hasMorePages: Bool {
         currentPage < maxPage
     }
 

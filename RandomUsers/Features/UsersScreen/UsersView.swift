@@ -66,7 +66,7 @@ struct UsersView: View {
     private var noSearchResultsStatusView: some View {
         StatusView(
             state: .info,
-            message: AppError.noMathcingUsers.description,
+            message: Constants.ErrorDescription.noMatchingUsers.rawValue,
             primaryButtonTitle: "OK",
             primaryAction: viewModel.clearSearchInput
         )
