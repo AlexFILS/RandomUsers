@@ -12,135 +12,104 @@ import Observation
 @MainActor
 @Observable
 final class UsersViewModel {
-    private enum FailedFetch {
-        case initialUsers
-        case nextPage(index: Int)
-    }
-    
-    private enum ScreenState {
-        case loading
-        case loaded
-        case failed(FailedFetch?, message: String)
-    }
-    
     enum StatusAction: Equatable {
         case dismissError
         case retryFailedFetch
         case clearSearchInput
+        case reloadUsers
     }
-    
+
     typealias Status = StatusPresentation<StatusAction>
-    
+
     /// What the list area shows.
     enum Content: Equatable {
         case users([UserModel])
         case empty(Status)
     }
-    
+
     enum Overlay: Equatable {
         case loading
         case status(Status)
     }
-    
+
     enum Footer: Equatable {
         case loadingNextPage
         case retryNextPage
     }
-    
-    private static let minimumSearchCharacterCount = 3
-    
-    var searchText: String = ""
-    
-    private(set) var users: [UserModel]
-    private(set) var isSearchBarVisible = false
-    private(set) var searchResults: [UserModel]?
-    private var state: ScreenState = .loaded
-    private var pendingPageRetryIndex: Int?
-    
+
+    var searchText: String {
+        get { searchCoordinator.text }
+        set { searchCoordinator.text = newValue }
+    }
+
+    var isSearchBarVisible: Bool { searchCoordinator.isActive }
+    var users: [UserModel] { loader.items }
+    var searchResults: [UserModel]? { searchCoordinator.results }
+
+    /// A search failure has no fetch behind it to retry, so it is tracked here rather than
+    /// pushed into the loader and dressed up as a load that failed.
+    private var searchFailureMessage: String?
+
     @ObservationIgnored let screenTitle = String(localized: .usersScreenTitle)
-    @ObservationIgnored private let paginationConfiguration: UsersPaginationConfiguration
-    @ObservationIgnored private let fetcher: UserPageFetcher
-    @ObservationIgnored private let paginator: Paginator<UserPageFetcher>
-    @ObservationIgnored private let searchController: SearchController<UserModel>
-    @ObservationIgnored private let searchDebounceDuration: Duration
+    @ObservationIgnored private let loader: PaginatedCollectionLoader<UserPageFetcher>
+    @ObservationIgnored private let searchCoordinator: SearchCoordinator<UserModel>
     @ObservationIgnored private let onSelectUser: (UserModel) -> Void
-    @ObservationIgnored private(set) var retryTask: Task<Void, Never>?
-    @ObservationIgnored private var fetchGeneration = 0
-    @ObservationIgnored private(set) var prefetchTask: Task<Void, Never>?
-    @ObservationIgnored private var furthestAppearedIndex = -1
-    
+
     var content: Content {
-        guard let searchResults else { return .users(users) }
-        guard searchResults.isEmpty else { return .users(searchResults) }
-        return .empty(
-            Status(
-                kind: .info,
-                title: String(localized: .statusInfoTitle),
-                message: Constants.ErrorDescription.noMatchingUsers,
-                primaryButton: Status.Button(
-                    title: String(localized: .ok),
-                    action: .clearSearchInput
-                )
-            )
-        )
-    }
-    
-    var overlay: Overlay? {
-        switch state {
-        case .loading:
-            return .loading
-        case .loaded:
-            return nil
-        case .failed(let failedFetch, let message):
-            return .status(errorStatus(for: failedFetch, message: message))
+        if let searchResults = searchCoordinator.results {
+            guard searchResults.isEmpty else { return .users(searchResults) }
+            return .empty(noMatchesStatus)
         }
+        guard loader.items.isEmpty, loader.hasLoadedInitialPage else {
+            return .users(loader.items)
+        }
+        return .empty(noUsersStatus)
     }
-    
-    var footer: Footer? {
-        if paginator.isFetchingNextPage { return .loadingNextPage }
-        if pendingPageRetryIndex != nil { return .retryNextPage }
+
+    var overlay: Overlay? {
+        if loader.isLoadingInitialPage { return .loading }
+        if let failure = loader.failure {
+            return .status(errorStatus(for: failure.load, message: message(for: failure.error)))
+        }
+        if let searchFailureMessage {
+            return .status(errorStatus(for: nil, message: searchFailureMessage))
+        }
         return nil
     }
-    
-    private var isLoading: Bool {
-        if case .loading = state { return true }
-        return false
+
+    var footer: Footer? {
+        if loader.isFetchingNextPage { return .loadingNextPage }
+        if loader.hasParkedPage { return .retryNextPage }
+        return nil
     }
-    
+
     init(
         users: [UserModel] = [],
         service: ServiceProtocol,
         searchService: SearchableCollectionProtocol,
         paginationConfiguration: UsersPaginationConfiguration = .default,
-        searchDebounceDuration: Duration = .seconds(1),
+        searchConfiguration: SearchConfiguration = .default,
         onSelectUser: @escaping (UserModel) -> Void
     ) {
-        self.users = users
-        self.paginationConfiguration = paginationConfiguration
-        self.searchDebounceDuration = searchDebounceDuration
         self.onSelectUser = onSelectUser
-        let fetcher = UserPageFetcher(
-            service: service,
-            configuration: paginationConfiguration
+        self.loader = PaginatedCollectionLoader(
+            fetcher: UserPageFetcher(
+                service: service,
+                configuration: paginationConfiguration
+            ),
+            configuration: paginationConfiguration,
+            items: users
         )
-        self.fetcher = fetcher
-        self.paginator = Paginator(
-            fetcher: fetcher,
-            maxPage: paginationConfiguration.maxPage,
-            prefetchOffsetFromEnd: paginationConfiguration.prefetchOffsetFromEnd
+        self.searchCoordinator = SearchCoordinator(
+            searchService: searchService,
+            configuration: searchConfiguration
         )
-        self.searchController = SearchController(searchService: searchService)
     }
-    
-    deinit {
-        retryTask?.cancel()
-        prefetchTask?.cancel()
-    }
-    
+
     func select(_ user: UserModel) {
         onSelectUser(user)
     }
-    
+
     /// Single entry point for every status-screen button, so the view forwards an intent rather
     /// than choosing which method a given button maps to.
     func perform(_ action: StatusAction) {
@@ -151,189 +120,127 @@ final class UsersViewModel {
             retryTapped()
         case .clearSearchInput:
             clearSearchInput()
+        case .reloadUsers:
+            reloadTapped()
         }
     }
-    
-    /// Dismisses the failure. A page that was mid-flight stays parked rather than silently
-    /// re-firing, so the footer offers an explicit retry rather than the list silently ending.
-    func clearErrors() {
-        if case .failed(.nextPage(let index), _) = state {
-            pendingPageRetryIndex = index
-        }
-        retryTask?.cancel()
-        retryTask = nil
-        invalidateInFlightFetches()
-        state = .loaded
+
+    /// Awaits whatever the screen has in flight. Exists so callers can act on a settled state
+    /// without reaching for the task handles themselves.
+    func waitForPendingWork() async {
+        await loader.waitForPendingWork()
     }
-    
-    func retry() async {
-        guard case .failed(
-            let failedFetch,
-            _
-        ) = state, let failedFetch else { return }
-        invalidateInFlightFetches()
-        state = .loaded
-        switch failedFetch {
-        case .initialUsers:
-            await fetchUsersIfNeeded()
-        case .nextPage(let index):
-            await retryNextPage(at: index)
-        }
-    }
-    
-    func retryTapped() {
-        retryTask?.cancel()
-        retryTask = Task { [weak self] in
-            await self?.retry()
-        }
-    }
-    
-    /// Resumes pagination parked by `clearErrors()`. Driven by the list footer, which is the
-    /// only thing left that can ask for the page once its triggering row has appeared.
-    func retryPendingPage() {
-        guard let index = pendingPageRetryIndex else { return }
-        retryTask?.cancel()
-        retryTask = Task { [weak self] in
-            await self?.retryNextPage(at: index)
-        }
-    }
-    
-    private func retryNextPage(at index: Int) async {
-        pendingPageRetryIndex = nil
-        guard let task = prefetchNextPageIfNeeded(at: index, force: true) else { return }
-        await withTaskCancellationHandler {
-            await task.value
-        } onCancel: {
-            task.cancel()
-        }
-    }
-    
-    /// Stops pagination without touching the error state, leaving the page to be re-asked for
-    /// later by `resumePrefetchIfNeeded()`.
-    private func pausePagination() {
-        prefetchTask?.cancel()
-        prefetchTask = nil
-        paginator.cancelInFlightFetch()
-    }
-    
-    /// Stops whatever is in flight and marks its result as stale, so a failure that is already
-    /// on its way back cannot revive an error state the user has just moved on from.
-    private func invalidateInFlightFetches() {
-        fetchGeneration &+= 1
-        pausePagination()
-    }
-    
+
+    // MARK: - Loading
+
     func fetchUsersIfNeeded() async {
-        guard users.isEmpty, !isLoading else { return }
-        let generation = fetchGeneration
-        state = .loading
-        do {
-            users = try await fetcher.fetchPage(0)
-            state = .loaded
-        } catch is CancellationError {
-            state = .loaded
-        } catch {
-            handle(error, retryingWith: .initialUsers, generation: generation)
-        }
+        await loader.loadInitialPageIfNeeded()
     }
-    
-    @discardableResult
-    func prefetchNextPageIfNeeded(at index: Int, force: Bool = false) -> Task<Void, Never>? {
-        if !force {
-            guard pendingPageRetryIndex == nil, index > furthestAppearedIndex else { return nil }
-        }
-        furthestAppearedIndex = max(furthestAppearedIndex, index)
-        
-        let totalCount = users.count
-        guard paginator.shouldPrefetch(at: index, totalCount: totalCount) else { return nil }
-        
-        let generation = fetchGeneration
-        let task = Task { [weak self] in
-            guard let self else { return }
-            do {
-                guard let newUsers = try await paginator.prefetchNextPageIfNeeded(
-                    at: index,
-                    totalCount: totalCount
-                ) else { return }
-                try Task.checkCancellation()
-                guard generation == fetchGeneration else { return }
-                users.append(contentsOf: newUsers)
-            } catch {
-                guard !Task.isCancelled else { return }
-                handle(
-                    error,
-                    retryingWith: .nextPage(
-                        index: index
-                    ),
-                    generation: generation
-                )
-            }
-        }
-        prefetchTask = task
-        return task
+
+    func prefetchNextPageIfNeeded(at index: Int) {
+        loader.prefetchIfNeeded(at: index)
     }
-    
-    /// Re-asks for the page the furthest-seen row would have triggered.
-    ///
-    /// A prefetch can be abandoned without any row appearing again afterwards - the user was
-    /// already at the bottom of the list when a search cancelled the in-flight fetch, or when
-    /// the fetch failed and they dismissed the error. `onAppear` fires once per row, so
-    /// without this the list would silently stop paginating with no way to recover.
-    private func resumePrefetchIfNeeded() {
-        guard pendingPageRetryIndex == nil, furthestAppearedIndex >= 0 else { return }
-        prefetchNextPageIfNeeded(at: furthestAppearedIndex, force: true)
+
+    func clearErrors() {
+        searchFailureMessage = nil
+        loader.dismissFailure()
     }
-    
+
+    func retry() async {
+        await loader.retryFailedLoad()
+    }
+
+    func retryTapped() {
+        loader.startRetryingFailedLoad()
+    }
+
+    func retryPendingPage() {
+        loader.startRetryingParkedPage()
+    }
+
+    func reloadTapped() {
+        loader.startReloading()
+    }
+
+    // MARK: - Search
+
     func startSearching() {
-        isSearchBarVisible = true
+        searchCoordinator.activate()
     }
-    
+
     func cancelSearch() {
-        isSearchBarVisible = false
-        searchText = ""
-        clearSearchResults()
+        guard searchCoordinator.cancel() else { return }
+        loader.resumePrefetchIfNeeded()
     }
-    
+
     func clearSearchInput() {
-        searchText = ""
+        searchCoordinator.clearText()
     }
-    
+
     func search() async {
-        guard searchText.count >= Self.minimumSearchCharacterCount else {
+        guard searchCoordinator.hasMatchableQuery else {
             clearSearchResults()
             return
         }
-        let generation = fetchGeneration
+        // Before the debounce rather than after it: a page fetched during the wait is one the
+        // user has already shown they are no longer scrolling towards.
+        loader.pausePagination()
         do {
-            try await Task.sleep(for: searchDebounceDuration)
-            pausePagination()
-            let results = try await searchController.search(query: searchText, in: users)
-            // `.task(id:)` cancels this on the next keystroke, but the matching itself has no
-            // suspension point at which to notice - so check before publishing
-            try Task.checkCancellation()
-            searchResults = results
+            try await searchCoordinator.run(over: { loader.items })
+        } catch is CancellationError {
+            return
         } catch {
-            handle(error, generation: generation)
+            searchFailureMessage = message(for: error)
         }
     }
-    
+
     private func clearSearchResults() {
-        guard searchResults != nil else { return }
-        searchResults = nil
-        resumePrefetchIfNeeded()
+        guard searchCoordinator.clearResults() else { return }
+        loader.resumePrefetchIfNeeded()
     }
-    
-    private func errorStatus(for failedFetch: FailedFetch?, message: String) -> Status {
+
+    // MARK: - Status presentation
+
+    private var noMatchesStatus: Status {
+        Status(
+            kind: .info,
+            title: String(localized: .statusInfoTitle),
+            message: Constants.ErrorDescription.noMatchingUsers,
+            primaryButton: Status.Button(
+                title: String(localized: .ok),
+                action: .clearSearchInput
+            )
+        )
+    }
+
+    private var noUsersStatus: Status {
+        Status(
+            kind: .info,
+            title: String(localized: .statusInfoTitle),
+            message: Constants.ErrorDescription.noUsers,
+            primaryButton: Status.Button(
+                title: String(localized: .retry),
+                action: .reloadUsers
+            )
+        )
+    }
+
+    private func errorStatus(
+        for failedLoad: PaginatedCollectionLoader<UserPageFetcher>.FailedLoad?,
+        message: String
+    ) -> Status {
         let title = String(localized: .statusErrorTitle)
         let dismiss = Status.Button(title: String(localized: .ok), action: .dismissError)
         let retry = Status.Button(title: String(localized: .retry), action: .retryFailedFetch)
-        
-        guard let failedFetch else {
+
+        // No load behind it - a search failure. "Retry" would provably do nothing.
+        guard let failedLoad else {
             return Status(kind: .error, title: title, message: message, primaryButton: dismiss)
         }
-        
-        switch failedFetch {
-        case .initialUsers:
+
+        switch failedLoad {
+        case .initialPage:
+            // Dismissing would reveal a blank screen, so retrying is the only way forward.
             return Status(kind: .error, title: title, message: message, primaryButton: retry)
         case .nextPage:
             return Status(
@@ -345,16 +252,10 @@ final class UsersViewModel {
             )
         }
     }
-    
-    private func handle(
-        _ error: Error,
-        retryingWith retry: FailedFetch? = nil,
-        generation: Int
-    ) {
-        guard !(error is CancellationError), generation == fetchGeneration else { return }
-        let message = (error as? DescribableErrorProtocol)?.description
+
+    private func message(for error: Error) -> String {
+        (error as? DescribableErrorProtocol)?.description
         ?? Constants.ErrorDescription.defaultError
-        state = .failed(retry, message: message)
     }
 }
 
@@ -367,7 +268,7 @@ extension UsersViewModel {
             onSelectUser: { _ in }
         )
     }
-    
+
     static func developWithError() -> UsersViewModel {
         UsersViewModel(
             service: UsersServiceErrorStub(),

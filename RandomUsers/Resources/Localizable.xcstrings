@@ -243,6 +243,17 @@
         }
       }
     },
+    "noUsers" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There are no users to show right now."
+          }
+        }
+      }
+    },
     "notAvailable" : {
       "extractionState" : "manual",
       "localizations" : {

@@ -27,5 +27,9 @@ enum Constants {
         static var noMatchingUsers: String {
             String(localized: .noMatchingUsers)
         }
+
+        static var noUsers: String {
+            String(localized: .noUsers)
+        }
     }
 }

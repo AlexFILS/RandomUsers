@@ -5,7 +5,7 @@
 //  Created by Alexandru Mihai on 25/07/2026.
 //
 
-import UIComponents
+import enum UIComponents.StatusViewType
 
 extension StatusKind {
     /// Translates the view models' UI-free `StatusKind` into the `UIComponents` type. Lives on

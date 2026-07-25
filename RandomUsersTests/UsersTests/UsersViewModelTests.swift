@@ -91,7 +91,10 @@ struct UsersViewModelTests {
                 seed: "seed",
                 prefetchOffsetFromEnd: prefetchOffsetFromEnd
             ),
-            searchDebounceDuration: searchDebounceDuration,
+            searchConfiguration: SearchConfiguration(
+                debounceDuration: searchDebounceDuration,
+                minimumQueryLength: 3
+            ),
             onSelectUser: onSelectUser
         )
     }
@@ -178,7 +181,8 @@ struct UsersViewModelTests {
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
         
-        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
+        viewModel.prefetchNextPageIfNeeded(at: 0)
+        await viewModel.waitForPendingWork()
         
         #expect(viewModel.isShowingError)
         #expect(viewModel.users.count == 1)
@@ -190,7 +194,8 @@ struct UsersViewModelTests {
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
         
-        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
+        viewModel.prefetchNextPageIfNeeded(at: 0)
+        await viewModel.waitForPendingWork()
         #expect(viewModel.isShowingError)
         
         service.errorToThrow = nil
@@ -212,80 +217,15 @@ struct UsersViewModelTests {
         service.gate = gate
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
         
-        let task = viewModel.prefetchNextPageIfNeeded(at: 0)
+        viewModel.prefetchNextPageIfNeeded(at: 0)
         await gate.waitForArrivals(count: 1)
         
         viewModel.searchText = "test"
         await viewModel.search()
         
         await gate.open()
-        await task?.value
+        await viewModel.waitForPendingWork()
         
-        #expect(!viewModel.isShowingError)
-        #expect(viewModel.users.count == 1)
-    }
-    
-    // MARK: - prefetchNextPageIfNeeded: no task unless a page is genuinely due
-
-    @Test
-    func aRowBelowThePrefetchThresholdStartsNoTaskAtAll() async {
-        let service = StubService()
-        let viewModel = Self.makeViewModel(
-            users: [Self.makeUser(id: "0"), Self.makeUser(id: "1"), Self.makeUser(id: "2")],
-            service: service
-        )
-
-        // Threshold for 3 users at offset 0 is index 2, so row 0 is nowhere near it. Returning a
-        // task here would mean every row scrolled past spawns one only to discover it has nothing
-        // to do - and each one silently orphans the handle to whichever task is really fetching.
-        let task = viewModel.prefetchNextPageIfNeeded(at: 0)
-
-        #expect(task == nil)
-        #expect(service.requestCount == 0)
-    }
-
-    @Test
-    func aRowAppearingDuringAnInFlightFetchStartsNoTaskAtAll() async {
-        let gate = Gate()
-        let service = StubService()
-        service.gate = gate
-        let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
-
-        let inFlight = viewModel.prefetchNextPageIfNeeded(at: 0)
-        await gate.waitForArrivals(count: 1)
-
-        // The next row appears while the page it would have asked for is already on its way.
-        let duplicate = viewModel.prefetchNextPageIfNeeded(at: 1)
-
-        #expect(duplicate == nil)
-        // `prefetchTask` must still be the fetch that is actually running, or nothing can cancel
-        // it: it was previously replaced by tasks like `duplicate` that returned immediately.
-        #expect(viewModel.prefetchTask == inFlight)
-
-        await gate.open()
-        await inFlight?.value
-        #expect(service.requestCount == 1)
-    }
-
-    @Test
-    func aCancelledPrefetchDoesNotReportItsFailure() async {
-        let gate = Gate()
-        let service = StubService()
-        service.gate = gate
-        service.errorToThrow = StubService.StubError()
-        // The request fails for real, so the failure escapes as itself rather than as a
-        // `CancellationError` the paginator would swallow on the way out.
-        service.ignoresCancellation = true
-        let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
-
-        let prefetch = viewModel.prefetchNextPageIfNeeded(at: 0)
-        await gate.waitForArrivals(count: 1)
-
-        prefetch?.cancel()
-        await gate.open()
-        await prefetch?.value
-
-        // Nobody is waiting on this page any more, so its failure is not news worth an alert.
         #expect(!viewModel.isShowingError)
         #expect(viewModel.users.count == 1)
     }
@@ -366,14 +306,14 @@ struct UsersViewModelTests {
         service.gate = gate
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
         
-        let task = viewModel.prefetchNextPageIfNeeded(at: 0)
+        viewModel.prefetchNextPageIfNeeded(at: 0)
         await gate.waitForArrivals(count: 1)
 
         #expect(viewModel.footer == .loadingNextPage)
         #expect(viewModel.overlay == nil)
 
         await gate.open()
-        await task?.value
+        await viewModel.waitForPendingWork()
     }
     
     // MARK: - pagination resumes after an interrupted fetch
@@ -384,12 +324,13 @@ struct UsersViewModelTests {
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
 
-        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
+        viewModel.prefetchNextPageIfNeeded(at: 0)
+        await viewModel.waitForPendingWork()
         #expect(viewModel.isShowingError)
 
         let requestCountAtFailure = service.requestCount
         viewModel.clearErrors()
-        await viewModel.prefetchTask?.value
+        await viewModel.waitForPendingWork()
 
         // "OK" used to re-fire the same fetch, which failed again and put the error straight
         // back on screen - the user could never dismiss it while the failure persisted.
@@ -404,12 +345,14 @@ struct UsersViewModelTests {
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
 
-        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
+        viewModel.prefetchNextPageIfNeeded(at: 0)
+        await viewModel.waitForPendingWork()
         viewModel.clearErrors()
-        await viewModel.prefetchTask?.value
+        await viewModel.waitForPendingWork()
 
         let requestCountAfterDismissal = service.requestCount
-        await viewModel.prefetchNextPageIfNeeded(at: 1)?.value
+        viewModel.prefetchNextPageIfNeeded(at: 1)
+        await viewModel.waitForPendingWork()
 
         #expect(service.requestCount == requestCountAfterDismissal)
         #expect(!viewModel.isShowingError)
@@ -421,9 +364,10 @@ struct UsersViewModelTests {
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
 
-        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
+        viewModel.prefetchNextPageIfNeeded(at: 0)
+        await viewModel.waitForPendingWork()
         viewModel.clearErrors()
-        await viewModel.prefetchTask?.value
+        await viewModel.waitForPendingWork()
         #expect(viewModel.footer == .retryNextPage)
 
         service.errorToThrow = nil
@@ -433,7 +377,7 @@ struct UsersViewModelTests {
         )
 
         viewModel.retryPendingPage()
-        await viewModel.retryTask?.value
+        await viewModel.waitForPendingWork()
 
         #expect(viewModel.users.map(\.id) == ["0", "1"])
         #expect(viewModel.footer == nil)
@@ -451,14 +395,14 @@ struct UsersViewModelTests {
         // its way back when the user dismisses.
         service.ignoresCancellation = true
 
-        let prefetch = viewModel.prefetchNextPageIfNeeded(at: 0)
+        viewModel.prefetchNextPageIfNeeded(at: 0)
         await gate.waitForArrivals(count: 1)
 
         // Previously that failure re-raised the error the user had just dismissed - often
         // while a pushed screen hid it, so it reappeared out of nowhere on the way back.
         viewModel.clearErrors()
         await gate.open()
-        await prefetch?.value
+        await viewModel.waitForPendingWork()
 
         #expect(!viewModel.isShowingError)
     }
@@ -470,14 +414,14 @@ struct UsersViewModelTests {
         service.gate = gate
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
         
-        let prefetch = viewModel.prefetchNextPageIfNeeded(at: 0)
+        viewModel.prefetchNextPageIfNeeded(at: 0)
         await gate.waitForArrivals(count: 1)
         
         viewModel.searchText = "test"
         await viewModel.search()
         
         await gate.open()
-        await prefetch?.value
+        await viewModel.waitForPendingWork()
         // The page the search interrupted never landed.
         #expect(viewModel.users.count == 1)
         
@@ -488,7 +432,7 @@ struct UsersViewModelTests {
         )
         
         viewModel.cancelSearch()
-        await viewModel.prefetchTask?.value
+        await viewModel.waitForPendingWork()
         
         #expect(viewModel.searchResults == nil)
         #expect(viewModel.users.map(\.id) == ["0", "1"])
@@ -540,7 +484,8 @@ struct UsersViewModelTests {
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
 
-        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
+        viewModel.prefetchNextPageIfNeeded(at: 0)
+        await viewModel.waitForPendingWork()
 
         // There is a list behind this one, so dismissing is safe - and the page is worth re-asking for.
         #expect(viewModel.errorStatus?.primaryButton.action == .dismissError)
@@ -583,19 +528,48 @@ struct UsersViewModelTests {
     }
 
     @Test
+    func aFetchThatLegitimatelyReturnsNoUsersOffersAReload() async {
+        let service = StubService()
+        let viewModel = Self.makeViewModel(service: service)
+
+        await viewModel.fetchUsersIfNeeded()
+
+        // An empty first page used to render as a blank scroll view, and the `users.isEmpty`
+        // guard meant every reappearance silently re-fetched it with nothing to show for it.
+        guard case .empty(let status) = viewModel.content else {
+            Issue.record("Expected an empty content state, got \(viewModel.content)")
+            return
+        }
+        #expect(status.kind == .info)
+        #expect(status.primaryButton.action == .reloadUsers)
+        #expect(viewModel.overlay == nil)
+
+        // ...and it is now a state the screen can actually get out of.
+        service.response = UsersResponse(
+            results: [Self.makeUser(id: "1")],
+            info: ResponseInfo(seed: "seed", results: 1, page: 1, version: "1.4")
+        )
+        viewModel.perform(status.primaryButton.action)
+        await viewModel.waitForPendingWork()
+
+        #expect(viewModel.users.map(\.id) == ["1"])
+    }
+
+    @Test
     func performRoutesAStatusActionToTheMatchingIntent() async {
         let service = StubService()
         service.errorToThrow = StubService.StubError()
         let viewModel = Self.makeViewModel(users: [Self.makeUser(id: "0")], service: service)
 
-        await viewModel.prefetchNextPageIfNeeded(at: 0)?.value
+        viewModel.prefetchNextPageIfNeeded(at: 0)
+        await viewModel.waitForPendingWork()
         guard let dismiss = viewModel.errorStatus?.primaryButton else {
             Issue.record("Expected a dismissable error status")
             return
         }
 
         viewModel.perform(dismiss.action)
-        await viewModel.prefetchTask?.value
+        await viewModel.waitForPendingWork()
 
         #expect(!viewModel.isShowingError)
         #expect(viewModel.footer == .retryNextPage)

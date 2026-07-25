@@ -50,6 +50,13 @@ final class Paginator<Fetcher: PaginationFetcherProtocol> {
         isFetchingNextPage = false
     }
 
+    /// Returns to the first page, so a collection that has been emptied can be paged from the
+    /// start again rather than resuming from wherever the previous run left off.
+    func reset() {
+        cancelInFlightFetch()
+        currentPage = 0
+    }
+
     func shouldPrefetch(at index: Int, totalCount: Int) -> Bool {
         guard hasMorePages, task == nil else { return false }
         return index >= totalCount - 1 - prefetchOffsetFromEnd

@@ -8,7 +8,7 @@
 import Foundation
 import Networking
 
-struct UsersPaginationConfiguration: Sendable {
+struct UsersPaginationConfiguration: PaginationConfigurationProtocol {
     let resultsPerPage: Int
     let maxPage: Int
     let seed: String
