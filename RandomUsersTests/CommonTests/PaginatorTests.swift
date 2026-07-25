@@ -127,6 +127,31 @@ struct PaginatorTests {
     }
     
     @Test
+    func cancellingInFlightFetchFreesThePaginatorImmediately() async throws {
+        let gate = Gate()
+        let paginator = Paginator(
+            fetcher: StubPageFetcher(pages: [1: ["b"]], gate: gate),
+            maxPage: 2,
+            prefetchOffsetFromEnd: 0
+        )
+
+        let resultTask = Task { try await paginator.prefetchNextPageIfNeeded(at: 0, totalCount: 1) }
+        await gate.waitForArrivals(count: 1)
+        #expect(!paginator.shouldPrefetch(at: 0, totalCount: 1))
+
+        paginator.cancelInFlightFetch()
+
+        // Callers decide whether to spawn a fetch by asking synchronously, so a replacement has to
+        // be startable right away. Waiting for the cancelled fetch to resume and tear itself down
+        // would have the replacement rejected as a duplicate of the request just abandoned.
+        #expect(paginator.shouldPrefetch(at: 0, totalCount: 1))
+        #expect(!paginator.isFetchingNextPage)
+
+        await gate.open()
+        #expect(try await resultTask.value == nil)
+    }
+
+    @Test
     func nonCancellationErrorsAreReported() async {
         let paginator = Paginator(
             fetcher: StubPageFetcher(errorToThrow: StubPageFetcher.StubError()),

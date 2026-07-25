@@ -10,14 +10,9 @@ import SwiftUI
 struct UserDetailsView: View {
     @State private var viewModel: UserDetailsViewModel
     @ScaledMetric(relativeTo: .body) private var avatarSize: CGFloat = 120
-    private let coordinator: UserDetailsFlowCoordinatorProtocol
     
-    init(
-        user: UserModel,
-        coordinator: UserDetailsFlowCoordinatorProtocol
-    ) {
-        _viewModel = State(initialValue: UserDetailsViewModel(user: user))
-        self.coordinator = coordinator
+    init(viewModel: UserDetailsViewModel) {
+        _viewModel = State(initialValue: viewModel)
     }
     
     var body: some View {
@@ -27,7 +22,7 @@ struct UserDetailsView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button(action: coordinator.pop) {
+                Button(action: viewModel.goBack) {
                     Image(systemName: "chevron.backward")
                         .foregroundStyle(Theme.labelColor)
                 }
@@ -70,15 +65,10 @@ struct UserDetailsView: View {
     if let user = UserModel.preview {
         NavigationStack {
             UserDetailsView(
-                user: user,
-                coordinator: PreviewUserDetailsFlowCoordinator()
+                viewModel: UserDetailsViewModel(user: user, onBack: {})
             )
         }
     }
-}
-
-private final class PreviewUserDetailsFlowCoordinator: UserDetailsFlowCoordinatorProtocol {
-    func pop() {}
 }
 
 private extension UserModel {

@@ -41,35 +41,35 @@ struct UserDetailsViewModelTests {
     
     @Test
     func fullNameCombinesFirstAndLastName() {
-        let viewModel = UserDetailsViewModel(user: Self.makeUser())
+        let viewModel = UserDetailsViewModel(user: Self.makeUser(), onBack: {})
         
         #expect(viewModel.fullName == "Jane Doe")
     }
     
     @Test
     func usernameDisplayIsPrefixedWithAtSign() {
-        let viewModel = UserDetailsViewModel(user: Self.makeUser())
+        let viewModel = UserDetailsViewModel(user: Self.makeUser(), onBack: {})
         
         #expect(viewModel.usernameDisplay == "@janedoe1")
     }
     
     @Test
     func avatarUsesMediumPictureRatherThanThumbnailOrLarge() {
-        let viewModel = UserDetailsViewModel(user: Self.makeUser())
+        let viewModel = UserDetailsViewModel(user: Self.makeUser(), onBack: {})
         
         #expect(viewModel.avatarURLString == "medium.jpg")
     }
     
     @Test
     func sectionsGroupAllUserDetails() {
-        let viewModel = UserDetailsViewModel(user: Self.makeUser())
+        let viewModel = UserDetailsViewModel(user: Self.makeUser(), onBack: {})
         
         #expect(viewModel.sections.map(\.title) == ["Personal", "Contact", "Address", "Account"])
     }
     
     @Test
     func identificationRowUsesItsOwnNameAsTitle() {
-        let viewModel = UserDetailsViewModel(user: Self.makeUser())
+        let viewModel = UserDetailsViewModel(user: Self.makeUser(), onBack: {})
         
         let personalSection = viewModel.sections.first { $0.title == "Personal" }
         let identificationRow = personalSection?.rows.first { $0.title == "PPS" }
@@ -79,7 +79,7 @@ struct UserDetailsViewModelTests {
     
     @Test
     func identificationRowFallsBackToNotAvailableWhenValueIsMissing() {
-        let viewModel = UserDetailsViewModel(user: Self.makeUser(identificationValue: nil))
+        let viewModel = UserDetailsViewModel(user: Self.makeUser(identificationValue: nil), onBack: {})
         
         let personalSection = viewModel.sections.first { $0.title == "Personal" }
         let identificationRow = personalSection?.rows.first { $0.title == "PPS" }
@@ -89,12 +89,31 @@ struct UserDetailsViewModelTests {
     
     @Test
     func addressSectionContainsFullLocationDetails() {
-        let viewModel = UserDetailsViewModel(user: Self.makeUser())
+        let viewModel = UserDetailsViewModel(user: Self.makeUser(), onBack: {})
         
         let addressSection = viewModel.sections.first { $0.title == "Address" }
         
         #expect(addressSection?.rows.first { $0.title == "Street" }?.value == "12 Main St")
         #expect(addressSection?.rows.first { $0.title == "City" }?.value == "Springfield")
         #expect(addressSection?.rows.first { $0.title == "Postcode" }?.value == "62704")
+    }
+
+    @Test
+    func goingBackReportsTheIntentExactlyOnce() {
+        final class BackSpy {
+            private(set) var count = 0
+
+            func record() {
+                count += 1
+            }
+        }
+
+        let spy = BackSpy()
+        let viewModel = UserDetailsViewModel(user: Self.makeUser(), onBack: spy.record)
+
+        viewModel.goBack()
+
+        // The toolbar button used to call the coordinator directly, so this was untestable.
+        #expect(spy.count == 1)
     }
 }

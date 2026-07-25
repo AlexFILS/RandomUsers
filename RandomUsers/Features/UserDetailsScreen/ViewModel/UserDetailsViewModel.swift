@@ -37,14 +37,20 @@ final class UserDetailsViewModel {
     ]
     
     @ObservationIgnored private let user: UserModel
-    
-    init(user: UserModel) {
+    @ObservationIgnored private let onBack: () -> Void
+
+    init(user: UserModel, onBack: @escaping () -> Void) {
         self.user = user
+        self.onBack = onBack
         fullName = "\(user.name.first) \(user.name.last)"
         usernameDisplay = "@\(user.login.username)"
         avatarURLString = user.picture.medium
     }
-    
+
+    func goBack() {
+        onBack()
+    }
+
     private static func personalSection(for user: UserModel) -> DetailSection {
         DetailSection(
             title: String(localized: .personalSectionTitle),

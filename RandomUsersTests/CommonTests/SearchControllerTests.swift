@@ -11,26 +11,31 @@ import Testing
 @MainActor
 struct SearchControllerTests {
     
+    /// A model with nothing in common with `UserModel`. That it can conform at all is the point:
+    /// the searching layer no longer requires the Users feature's `Name`.
     private struct FakeItem: SearchableModelProtocol, Equatable {
-        let name: Name
         let email: String
+
+        var searchableTerms: [String] { [email] }
     }
-    
+
     private struct StubSearchService: SearchableCollectionProtocol {
         struct StubError: Error {}
-        
+
         var errorToThrow: Error?
-        
+
         func search<T: SearchableModelProtocol>(query: String, in elements: [T]) async throws -> [T] {
             if let errorToThrow {
                 throw errorToThrow
             }
-            return elements.filter { $0.email.contains(query) }
+            return elements.filter { element in
+                element.searchableTerms.contains { $0.contains(query) }
+            }
         }
     }
-    
+
     private static func makeItem(email: String) -> FakeItem {
-        FakeItem(name: Name(title: "Mx", first: "Test", last: "User"), email: email)
+        FakeItem(email: email)
     }
     
     @Test

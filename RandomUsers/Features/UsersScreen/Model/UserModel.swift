@@ -34,4 +34,7 @@ struct UserModel: Decodable, Hashable, Identifiable {
 }
 
 extension UserModel: SearchableModelProtocol {
+    var searchableTerms: [String] {
+        [name.first, name.last, email]
+    }
 }

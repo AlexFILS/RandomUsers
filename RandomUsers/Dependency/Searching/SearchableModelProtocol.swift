@@ -5,7 +5,7 @@
 //  Created by Alexandru Mihai on 22/07/2026.
 //
 
+/// What a model exposes to be searched
 protocol SearchableModelProtocol: Sendable {
-    var name: Name { get }
-    var email: String { get }
+    var searchableTerms: [String] { get }
 }

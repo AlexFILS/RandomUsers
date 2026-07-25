@@ -9,41 +9,44 @@ import SwiftUI
 import UIComponents
 
 struct UsersView: View {
-    @State private var viewModel: UsersViewModel
-    private let coordinator: UsersFlowCoordinatorProtocol
-    
-    init(
-        viewModel: UsersViewModel,
-        coordinator: UsersFlowCoordinatorProtocol
-    ) {
-        _viewModel = State(initialValue: viewModel)
-        self.coordinator = coordinator
+    /// `@Bindable`, not `@State`: this view model is owned by `UsersFlowCoordinator` and outlives
+    /// any one appearance of this view. Copying it into `@State` would claim an ownership this
+    @Bindable private var viewModel: UsersViewModel
+
+    init(viewModel: UsersViewModel) {
+        _viewModel = Bindable(wrappedValue: viewModel)
     }
-    
+
+    private var overlayStatus: UsersViewModel.Status? {
+        guard case .status(let status) = viewModel.overlay else { return nil }
+        return status
+    }
+
     var body: some View {
         BaseContentView(
             title: viewModel.screenTitle,
-            isLoading: viewModel.isLoading,
-            interactionsDisabled: viewModel.hasError,
+            isLoading: viewModel.overlay == .loading,
+            interactionsDisabled: viewModel.overlay != nil,
             onSearch: viewModel.startSearching
         ) {
             VStack {
                 if viewModel.isSearchBarVisible {
                     searchBar
                 }
-                if viewModel.hasNoSearchResults {
-                    noSearchResultsStatusView
-                } else {
-                    usersList
+                switch viewModel.content {
+                case .users(let users):
+                    usersList(users)
+                case .empty(let status):
+                    statusView(status)
                 }
             }
-            .allowsHitTesting(!viewModel.hasError)
+            .allowsHitTesting(overlayStatus == nil)
             .background(Theme.backgroundColorPrimary)
-            .blur(radius: viewModel.hasError ? 8 : 0)
+            .blur(radius: overlayStatus == nil ? 0 : 8)
         }
         .overlay {
-            if viewModel.hasError {
-                errorStatusView
+            if let overlayStatus {
+                statusView(overlayStatus)
             }
         }
         .task {
@@ -69,86 +72,53 @@ struct UsersView: View {
         .padding(.horizontal, 8)
     }
     
-    private var noSearchResultsStatusView: some View {
+    private func statusView(_ status: UsersViewModel.Status) -> some View {
         StatusView(
-            state: .info,
-            title: String(localized: .statusInfoTitle),
-            message: Constants.ErrorDescription.noMatchingUsers,
-            primaryButtonTitle: String(localized: .ok),
-            primaryAction: viewModel.clearSearchInput
+            state: status.kind.statusViewType,
+            title: status.title,
+            message: status.message,
+            primaryButtonTitle: status.primaryButton.title,
+            secondaryButtonTitle: status.secondaryButton?.title,
+            primaryAction: { viewModel.perform(status.primaryButton.action) },
+            secondaryAction: status.secondaryButton.map { button in
+                { viewModel.perform(button.action) }
+            }
         )
     }
-    
-    @ViewBuilder
-    private var errorStatusView: some View {
-        if viewModel.isInitialFetchFailure {
-            // Dismissing would reveal a blank screen, so retrying is the only way forward.
-            StatusView(
-                state: .error,
-                title: String(localized: .statusErrorTitle),
-                message: viewModel.errorDescription,
-                primaryButtonTitle: String(localized: .retry),
-                primaryAction: viewModel.retryTapped
-            )
-        } else if viewModel.canRetry {
-            StatusView(
-                state: .error,
-                title: String(localized: .statusErrorTitle),
-                message: viewModel.errorDescription,
-                primaryButtonTitle: String(localized: .ok),
-                secondaryButtonTitle: String(localized: .retry),
-                primaryAction: viewModel.clearErrors,
-                secondaryAction: viewModel.retryTapped
-            )
-        } else {
-            // A search failure has no fetch behind it; "Retry" here would do nothing at all.
-            StatusView(
-                state: .error,
-                title: String(localized: .statusErrorTitle),
-                message: viewModel.errorDescription,
-                primaryButtonTitle: String(localized: .ok),
-                primaryAction: viewModel.clearErrors
-            )
-        }
-    }
-    
-    private var usersList: some View {
+
+    private func usersList(_ users: [UserModel]) -> some View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(
-                    Array(
-                        viewModel.displayedUsers.enumerated()
-                    ),
+                    Array(users.enumerated()),
                     id: \.element.id
                 ) { index, user in
                     Button {
-                        coordinator.showUserDetails(for: user)
+                        viewModel.select(user)
                     } label: {
                         UserRow(user: user)
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    // Deduplication of repeat appearances lives in the view model, so that a
-                    // fetch which is cancelled or fails can reset it and let this row ask again.
                     .onAppear {
                         viewModel.prefetchNextPageIfNeeded(at: index)
                     }
                     Divider()
                         .padding(.leading, 16)
                 }
-                if viewModel.isFetchingNextPage {
+                switch viewModel.footer {
+                case .loadingNextPage:
                     nextPageIndicator
-                } else if viewModel.hasPendingPageRetry {
+                case .retryNextPage:
                     nextPageRetryButton
+                case nil:
+                    EmptyView()
                 }
             }
         }
     }
     
-    /// Dismissing a paging error parks pagination rather than silently re-firing the fetch
-    /// (see `UsersViewModel.clearErrors()`). The row whose appearance would normally resume it
-    /// has already appeared and won't again, so this footer is the way back.
     private var nextPageRetryButton: some View {
         Button(action: viewModel.retryPendingPage) {
             Label(
@@ -163,8 +133,6 @@ struct UsersView: View {
         .padding(.vertical, 16)
     }
     
-    /// Paging happens *below* the content the user is already reading - it must not blur or
-    /// disable the list the way `BaseContentView`'s blocking loading state does.
     private var nextPageIndicator: some View {
         ProgressView()
             .progressViewStyle(.circular)
@@ -177,23 +145,13 @@ struct UsersView: View {
 #if DEBUG
 #Preview {
     NavigationStack {
-        UsersView(
-            viewModel: .develop(),
-            coordinator: PreviewUsersFlowCoordinator()
-        )
+        UsersView(viewModel: .develop())
     }
 }
 
 #Preview("Error") {
     NavigationStack {
-        UsersView(
-            viewModel: .developWithError(),
-            coordinator: PreviewUsersFlowCoordinator()
-        )
+        UsersView(viewModel: .developWithError())
     }
-}
-
-private final class PreviewUsersFlowCoordinator: UsersFlowCoordinatorProtocol {
-    func showUserDetails(for user: UserModel) {}
 }
 #endif

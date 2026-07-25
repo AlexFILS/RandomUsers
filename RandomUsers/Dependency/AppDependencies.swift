@@ -19,7 +19,7 @@ extension AppDependencies {
     static func production() -> AppDependencies {
         AppDependencies(
             service: NetworkingClient(baseURL: Constants.Networking.baseURL),
-            searchService: UserSearchService()
+            searchService: SearchService()
         )
     }
     
@@ -27,7 +27,7 @@ extension AppDependencies {
     static func develop() -> AppDependencies {
         AppDependencies(
             service: UsersServiceStub(),
-            searchService: UserSearchService()
+            searchService: SearchService()
         )
     }
 #endif

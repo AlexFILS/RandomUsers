@@ -39,21 +39,28 @@ final class Paginator<Fetcher: PaginationFetcherProtocol> {
         task?.cancel()
     }
     
+    /// Clears the in-flight state synchronously rather than waiting for the cancelled fetch to
+    /// resume and run its own teardown. Callers decide whether to start a fetch by asking
+    /// `shouldPrefetch(at:totalCount:)`, so "cancel, then immediately ask again" has to be
+    /// answerable straight away - otherwise the replacement request is silently dropped as a
+    /// duplicate of the one just abandoned.
     func cancelInFlightFetch() {
         task?.cancel()
+        task = nil
+        isFetchingNextPage = false
     }
-    
+
+    func shouldPrefetch(at index: Int, totalCount: Int) -> Bool {
+        guard hasMorePages, task == nil else { return false }
+        return index >= totalCount - 1 - prefetchOffsetFromEnd
+    }
+
     /// Fetches the next page once `index` has reached (or passed) the prefetch threshold.
     /// Returns `nil` when no fetch was needed (already fetching, past `maxPage`, not at the
-    /// threshold yet, or the fetch was superseded by a `cancelInFlightFetch()` call) - callers
-    /// should treat `nil` the same as "nothing to append", not as a failure. Non-cancellation
-    /// failures are rethrown for the caller to handle.
+    /// threshold yet, or the fetch was superseded by a `cancelInFlightFetch()` call)
     func prefetchNextPageIfNeeded(at index: Int, totalCount: Int) async throws -> [Fetcher.Item]? {
-        guard hasMorePages, task == nil else { return nil }
-        let prefetchThreshold = totalCount - 1 - prefetchOffsetFromEnd
-        
-        guard index >= prefetchThreshold else { return nil }
-        
+        guard shouldPrefetch(at: index, totalCount: totalCount) else { return nil }
+
         let pageToLoad = currentPage + 1
         isFetchingNextPage = true
         let fetchTask = Task<[Fetcher.Item], Error> {
@@ -63,8 +70,10 @@ final class Paginator<Fetcher: PaginationFetcherProtocol> {
         }
         task = fetchTask
         defer {
-            isFetchingNextPage = false
-            task = nil
+            if task == fetchTask {
+                isFetchingNextPage = false
+                task = nil
+            }
         }
         
         do {

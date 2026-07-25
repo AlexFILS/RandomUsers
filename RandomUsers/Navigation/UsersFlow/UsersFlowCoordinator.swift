@@ -7,48 +7,48 @@
 
 import SwiftUI
 
-/// Owns the Users flow's navigation stack and is the sole place that builds its screens.
-/// Views depend on the `UsersFlowCoordinatorProtocol` and `UserDetailsFlowCoordinatorProtocol` protocols
 @MainActor
 @Observable
 final class UsersFlowCoordinator: Coordinator {
     var childCoordinators: [any Coordinator] = []
     var path = NavigationPath()
-    
+
     @ObservationIgnored private let dependencies: AppDependencies
-    @ObservationIgnored private let usersViewModel: UsersViewModel
-    
+    @ObservationIgnored private lazy var usersViewModel = UsersViewModel(
+        service: dependencies.service,
+        searchService: dependencies.searchService,
+        onSelectUser: { [weak self] user in
+            self?.showUserDetails(for: user)
+        }
+    )
+
     init(dependencies: AppDependencies) {
         self.dependencies = dependencies
-        usersViewModel = UsersViewModel(
-            service: dependencies.service,
-            searchService: dependencies.searchService
-        )
     }
-    
+
     func rootView() -> some View {
-        UsersView(
-            viewModel: usersViewModel,
-            coordinator: self
-        )
+        UsersView(viewModel: usersViewModel)
     }
-    
+
     func destination(for route: UsersRoute) -> some View {
         switch route {
         case .userDetails(let user):
-            UserDetailsView(user: user, coordinator: self)
+            UserDetailsView(
+                viewModel: UserDetailsViewModel(
+                    user: user,
+                    onBack: { [weak self] in
+                        self?.pop()
+                    }
+                )
+            )
         }
     }
-}
 
-extension UsersFlowCoordinator: UsersFlowCoordinatorProtocol {
-    func showUserDetails(for user: UserModel) {
+    private func showUserDetails(for user: UserModel) {
         path.append(UsersRoute.userDetails(user))
     }
-}
 
-extension UsersFlowCoordinator: UserDetailsFlowCoordinatorProtocol {
-    func pop() {
+    private func pop() {
         guard !path.isEmpty else { return }
         path.removeLast()
     }
