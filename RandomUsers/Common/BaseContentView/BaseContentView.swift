@@ -65,8 +65,8 @@ struct BaseContentView<Content: View>: View {
                 }
             }
             .toolbarBackground(backgroundColor, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackgroundVisibility(.visible, for: .navigationBar)
             .toolbarColorScheme(.light, for: .navigationBar)
-            .background(backgroundColor)
+            .background(backgroundColor, ignoresSafeAreaEdges: [.horizontal, .bottom])
     }
 }
